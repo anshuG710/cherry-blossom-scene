@@ -5,9 +5,8 @@
 @media(max-width:600px){
  .listening .music-card{top:auto;bottom:100px;padding:14px;max-height:34dvh;overflow:auto}
  .listening .music-card .feature-heading{margin:0;height:0}
- .listening .music-card .feature-heading .eyebrow{display:none}
- .listening .music-card .icon-button{position:absolute;right:8px;top:7px}
- .listening .music-card .track-row{padding-right:24px}
+ .listening .music-card .header-actions{position:absolute;right:8px;top:7px;display:flex;gap:6px}
+ .listening .music-card .track-row{padding-right:60px}
  .listening .music-card .play-button{width:38px;height:38px;font-size:16px}
  .listening .music-card h2{font-size:16px;margin-bottom:3px}
  .listening .music-card .track-row p{font-size:9px}
