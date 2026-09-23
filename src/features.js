@@ -37,19 +37,35 @@ async function startPlayback(){
  catch{if(epoch===playbackEpoch)$('music-status').textContent='Press play to start the song.';}
  showPlayback();
 }
+function togglePlayer(show) {
+  const visible = typeof show === 'boolean' ? show : player.hidden;
+  player.hidden = !visible;
+  $('music-open').setAttribute('aria-expanded', String(visible));
+}
+
 async function enterListening(){
- player.hidden=false;$('music-open').setAttribute('aria-expanded','true');
- if(sequencePending)return;
- if(atBench){await startPlayback();return;}
- sequencePending=true;$('music-play').disabled=true;
- $('music-status').textContent='Finding a seat beneath the blossoms…';
- // Unlock media during the user's gesture, preserving the selected position.
- const savedTime=audio.currentTime;
- audio.muted=true;
- try{await audio.play();audio.pause();audio.currentTime=savedTime;}catch{}finally{audio.muted=false;}
- if(sequencePending)window.dispatchEvent(new Event('anshu:listen-request'));
+  if(!player.hidden) {
+    togglePlayer(false);
+    return;
+  }
+  togglePlayer(true);
+  if(sequencePending)return;
+  if(atBench){
+    if(audio.paused) await startPlayback();
+    return;
+  }
+  sequencePending=true;$('music-play').disabled=true;
+  $('music-status').textContent='Finding a seat beneath the blossoms…';
+  // Unlock media during the user's gesture, preserving the selected position.
+  const savedTime=audio.currentTime;
+  audio.muted=true;
+  try{await audio.play();audio.pause();audio.currentTime=savedTime;}catch{}finally{audio.muted=false;}
+  if(sequencePending)window.dispatchEvent(new Event('anshu:listen-request'));
 }
 $('music-open').addEventListener('click',enterListening);
+const minBtn = $('music-minimize');
+if(minBtn) minBtn.addEventListener('click', () => togglePlayer(false));
+
 window.addEventListener('anshu:listen-ready',async()=>{
  if(!sequencePending)return;sequencePending=false;atBench=true;
  await startPlayback();$('music-play').disabled=false;
@@ -58,8 +74,9 @@ window.addEventListener('anshu:listen-cancel',()=>{
  sequencePending=false;atBench=false;$('music-play').disabled=false;pause();$('music-status').textContent='';
 });
 $('music-close').addEventListener('click',()=>{
+ pause();
  window.dispatchEvent(new Event('anshu:listen-exit'));
- player.hidden=true;$('music-open').setAttribute('aria-expanded','false');$('music-open').focus();
+ togglePlayer(false);$('music-open').focus();
 });
 $('music-play').addEventListener('click',async()=>{
  if(!audio.paused){pause();return;}
