@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { makePlayOrder } from '../src/play-order.js';
+assert.deepEqual(makePlayOrder(1, 0, true), [0]);
+assert.deepEqual(makePlayOrder(4, 2, false), [2,3,0,1]);
+const order = makePlayOrder(5, 2, true, () => .25);
+assert.equal(order[0], 2);
+assert.equal(new Set(order).size, 5);
+assert.deepEqual([...order].sort(), [0,1,2,3,4]);
+assert.notDeepEqual(order, [2,0,1,3,4]);
+console.log('Shuffle visits each track once and preserves the current song.');

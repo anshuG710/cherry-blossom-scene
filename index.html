@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#182c2c"><meta name="description" content="A living landscape. Explore a cherry blossom river valley in real-time 3D."><title>Safe Place — A moment in nature</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23233332'/%3E%3Ctext x='32' y='45' text-anchor='middle' font-size='44' fill='%23f4b8c9'%3E✳%3C/text%3E%3C/svg%3E"></head><body>
+<canvas id="scene" aria-label="Interactive cherry blossom river valley. Drag to orbit and scroll to zoom."></canvas>
+<div id="loading"><span class="flower">✳</span><p>Growing a little stillness…</p></div>
+<header><a class="brand" href="./" aria-label="Safe Place home"><span class="brand-mark">✳</span><span>SAFE PLACE<small>A MOMENT IN NATURE</small></span></a><div class="top-right"><button class="feature-button" id="music-open" aria-expanded="false" aria-controls="music-card">♫ <span>Listen</span></button><button class="feature-button" id="review-open" aria-label="Leave a review">☆ <span>Review</span></button><button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen">⛶</button></div></header>
+<section id="music-card" class="feature-card music-card compact-player" aria-label="Music player" hidden>
+  <div class="player-heading"><h2 id="track-name">Peaceful Song</h2><button class="icon-button" id="music-close" aria-label="Close player and return to landscape">×</button></div>
+  <input id="music-seek" aria-label="Song position" type="range" min="0" max="1" step="0.1" value="0" disabled>
+  <div class="song-times"><span id="music-elapsed">0:00</span><span id="music-duration">0:00</span></div>
+  <div class="transport"><button id="music-shuffle" aria-label="Shuffle" aria-pressed="true" title="Shuffle on">⤨</button><button id="music-previous" aria-label="Previous song" title="Previous song">❮❮</button><button id="music-play" class="play-button" aria-label="Play music">▶</button><button id="music-next" aria-label="Next song" title="Next song">❯❯</button><span aria-hidden="true"></span></div>
+  <label class="volume-row">Volume <input id="music-volume" aria-label="Music volume" type="range" min="0" max="1" step="0.01" value="0.35"></label>
+  <p id="music-status" class="feature-note" role="status"></p>
+</section>
+<dialog id="review-dialog" class="feature-card review-card" aria-labelledby="review-title">
+  <div class="feature-heading"><span class="eyebrow">A LITTLE NOTE FROM YOU</span><button class="icon-button" id="review-close" aria-label="Close review">×</button></div>
+  <h2 id="review-title">How was your moment?</h2><p class="review-intro">Tell us what made you pause, or what could feel better.</p>
+  <form id="review-form">
+    <fieldset class="rating"><legend>Your rating</legend><div class="star-options">
+      <label><input type="radio" name="rating" value="1" required aria-label="1 star"><span>★</span></label><label><input type="radio" name="rating" value="2" aria-label="2 stars"><span>★</span></label><label><input type="radio" name="rating" value="3" aria-label="3 stars"><span>★</span></label><label><input type="radio" name="rating" value="4" aria-label="4 stars"><span>★</span></label><label><input type="radio" name="rating" value="5" aria-label="5 stars"><span>★</span></label>
+    </div></fieldset>
+    <label class="field-label">Name <span>optional</span><input id="review-name" name="name" maxlength="60" placeholder="Your name" autocomplete="given-name"></label>
+    <label class="field-label">Your review<textarea id="review-message" name="message" rows="4" minlength="3" maxlength="600" required placeholder="A thought, a feeling, a suggestion…"></textarea></label>
+    <p class="feature-note">Saved on this device only. Reviews are not sent or shared publicly.</p>
+    <button type="submit" class="submit-review">Save my review <span>↗</span></button>
+  </form>
+  <p id="review-status" role="status" class="review-status"></p>
+  <article id="saved-review" class="saved-review" hidden><div><strong id="saved-name"></strong><span id="saved-rating"></span></div><p id="saved-message"></p><button id="review-edit">Edit my review</button> <button id="review-remove">Remove my review</button></article>
+</dialog>
+<main class="intro"><p class="eyebrow">01 &nbsp; / &nbsp; THE BLOSSOM VALLEY</p><h1>Let the world<br>slow down.</h1><p class="description">A passing breeze. A wandering petal.<br>Somewhere you can simply be.</p><div class="place"><span>35° 21′ N &nbsp; 138° 43′ E</span><i></i><span>SPRING, FOREVER</span></div></main>
+<section class="dock" aria-label="Landscape controls"><div class="dock-head"><div><span class="tune-icon">☷</span> Shape your moment <span class="dock-sub">A landscape that listens.</span></div><button id="collapse" aria-label="Collapse controls" aria-expanded="true">−</button></div><div class="controls" id="controls">
+<label>Wind strength <output id="wind-value">Gentle</output><input aria-label="Wind strength" id="wind" type="range" min="0" max="2" step="0.01" value="0.55"></label>
+<label>Petal intensity <output id="petals-value">60%</output><input aria-label="Petal intensity" id="petals" type="range" min="0" max="1" step="0.01" value="0.6"></label>
+<label>River speed <output id="river-value">0.8×</output><input aria-label="River speed" id="river" type="range" min="0" max="2" step="0.01" value="0.8"></label>
+<label>Time of day <output id="day-value">Golden hour</output><input aria-label="Time of day" id="day" type="range" min="0" max="1" step="0.01" value="0.24"></label>
+<label>Fog amount <output id="fog-value">35%</output><input aria-label="Fog amount" id="fog" type="range" min="0" max="1" step="0.01" value="0.35"></label>
+<label>Bloom intensity <output id="bloom-value">30%</output><input aria-label="Bloom intensity" id="bloom" type="range" min="0" max="1" step="0.01" value="0.3"></label>
+<div class="camera-controls"><button id="cinematic" role="switch" aria-checked="false"><span class="toggle"><i></i></span>Cinematic camera</button><button id="reset"><span>↺</span> Reset camera</button></div>
+</div></section><footer><span><b>↔</b> Drag to explore <i>·</i> Scroll to wander closer</span><span id="quality">REAL-TIME 3D <i> / </i> MADE FOR A DEEP BREATH</span></footer>
+<script type="module" src="/src/main.js"></script></body></html>
