@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#182c2c"><meta name="description" content="A living landscape. Explore a cherry blossom river valley in real-time 3D."><title>Safe Place — A moment in nature</title><link rel="icon" type="image/x-icon" href="./favicon.ico"><link rel="shortcut icon" href="./favicon.ico"><link rel="icon" type="image/png" href="./favicon.png"><link rel="apple-touch-icon" href="./favicon.png"></head><body>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#182c2c"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="description" content="A living landscape. Explore a cherry blossom river valley in real-time 3D."><title>Safe Place — A moment in nature</title><link rel="icon" type="image/x-icon" href="./favicon.ico"><link rel="shortcut icon" href="./favicon.ico"><link rel="icon" type="image/png" href="./favicon.png"><link rel="apple-touch-icon" href="./favicon.png"></head><body>
 <canvas id="scene" aria-label="Interactive cherry blossom river valley. Drag to orbit and scroll to zoom."></canvas>
 <div id="loading"><span class="flower">✳</span><p>Growing a little stillness…</p></div>
 <header><a class="brand" href="./" aria-label="Safe Place home"><span class="brand-mark">✳</span><span>SAFE PLACE<small>A MOMENT IN NATURE</small></span></a><div class="top-right"><button class="feature-button" id="music-open" aria-expanded="false" aria-controls="music-card">♫ <span>Listen</span></button><button class="feature-button" id="review-open" aria-label="Leave a review">☆ <span>Review</span></button><button class="feature-button" id="chat-open" aria-expanded="false" aria-controls="chat-card">💬 <span>Chat</span></button><button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen">⛶</button></div></header>
@@ -46,9 +46,12 @@
 </dialog>
 <section id="chat-card" class="feature-card chat-card" aria-label="Live chat" hidden>
   <div class="chat-heading">
-    <h2>Chat Room</h2>
+    <div>
+      <h2>Chat Room</h2>
+      <p class="chat-subhead" id="chat-subhead"><span class="chat-presence-dot"></span> <span id="chat-subhead-count">1 user online</span></p>
+    </div>
     <div class="header-actions">
-      <span class="chat-online" id="chat-online-badge">live</span>
+      <span class="chat-online" id="chat-online-badge">1 online</span>
       <button class="icon-button" id="chat-close" aria-label="Close chat" title="Close chat">×</button>
     </div>
   </div>

@@ -215,25 +215,35 @@ async function loadHistory() {
 
 // ── Presence / Active Users ─────────────────────────────────────────────
 function updatePresenceUI(count) {
+  const safeCount = Math.max(1, count || 1);
+  const label = safeCount === 1 ? '1 user online' : `${safeCount} users online`;
+  const badgeLabel = `${safeCount} online`;
+
+  const subheadEl = $('chat-subhead-count');
   const textEl = $('chat-presence-text');
   const badgeEl = $('chat-online-badge');
 
-  if (count <= 0) {
-    if (textEl) textEl.textContent = '1 user active';
-    if (badgeEl) badgeEl.textContent = 'live';
-    return;
-  }
-
-  const label = count === 1 ? '1 user active' : `${count} users active`;
+  if (subheadEl) subheadEl.textContent = label;
   if (textEl) textEl.textContent = label;
-  if (badgeEl) badgeEl.textContent = `live · ${count}`;
+  if (badgeEl) badgeEl.textContent = badgeLabel;
 }
 
 function handlePresenceSync() {
   if (!channel) return;
   const state = channel.presenceState();
-  const count = Object.keys(state).length;
-  updatePresenceUI(Math.max(1, count));
+  const keys = Object.keys(state || {});
+
+  // Count unique users across presences
+  const userSet = new Set();
+  for (const k of keys) {
+    const list = state[k] || [];
+    for (const item of list) {
+      if (item && item.user_id) userSet.add(item.user_id);
+    }
+  }
+
+  const count = userSet.size > 0 ? userSet.size : Math.max(1, keys.length);
+  updatePresenceUI(count);
 }
 
 // ── Realtime ─────────────────────────────────────────────────────────────
@@ -241,17 +251,23 @@ function subscribe() {
   if (channel) return;
   const client = getClient();
 
+  // Set initial UI right away
+  updatePresenceUI(1);
+
+  // Generate connection presence key (unique per device/tab)
+  const presenceKey = userId ? `u_${userId}_${Math.random().toString(36).slice(2, 7)}` : `guest_${Math.random().toString(36).slice(2, 9)}`;
+
   channel = client
     .channel('chat-room', {
       config: {
         presence: {
-          key: userId || ('guest-' + Math.random().toString(36).slice(2, 9)),
+          key: presenceKey,
         },
       },
     })
-    .on('presence', { event: 'sync' }, handlePresenceSync)
-    .on('presence', { event: 'join' }, handlePresenceSync)
-    .on('presence', { event: 'leave' }, handlePresenceSync)
+    .on('presence', { event: 'sync' }, () => handlePresenceSync())
+    .on('presence', { event: 'join' }, () => handlePresenceSync())
+    .on('presence', { event: 'leave' }, () => handlePresenceSync())
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'chat_messages' },
@@ -273,6 +289,7 @@ function subscribe() {
             display_name: displayName || 'Anonymous',
             online_at: new Date().toISOString(),
           });
+          handlePresenceSync();
         } catch (err) {
           console.warn('Presence tracking error:', err);
         }
@@ -294,7 +311,7 @@ async function unsubscribe() {
     client.removeChannel(channel);
     channel = null;
   }
-  updatePresenceUI(0);
+  updatePresenceUI(1);
 }
 
 // ── Send message ─────────────────────────────────────────────────────────
@@ -508,4 +525,16 @@ if (msgInput) {
 window.addEventListener('pagehide', () => {
   unsubscribe();
   stopExpirySweep();
+});
+
+// Re-sync presence when returning to the tab on mobile
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && panelOpen && channel) {
+    channel.track({
+      user_id: userId,
+      display_name: displayName || 'Anonymous',
+      online_at: new Date().toISOString(),
+    }).catch(() => {});
+    handlePresenceSync();
+  }
 });

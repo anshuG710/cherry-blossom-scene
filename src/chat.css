@@ -10,14 +10,21 @@
   display:flex;align-items:center;justify-content:space-between;
   gap:12px;margin-bottom:14px;flex-shrink:0;
 }
-.chat-heading h2{margin:0;font-size:17px;font-weight:500}
-.chat-online{
-  font-size:10px;color:#b6c1b4;letter-spacing:.4px;
+.chat-heading h2{margin:0;font-size:17px;font-weight:500;line-height:1.2}
+.chat-subhead{
   display:flex;align-items:center;gap:6px;
+  font-size:11px;color:#a2b29f;margin:3px 0 0;
+  letter-spacing:.3px;font-weight:400;
+}
+.chat-online{
+  font-size:11px;color:#b6c1b4;letter-spacing:.4px;
+  display:flex;align-items:center;gap:6px;
+  background:#ffffff0d;padding:4px 9px;border-radius:12px;
+  border:1px solid #ffffff14;
 }
 .chat-online::before{
   content:'';width:6px;height:6px;border-radius:50%;
-  background:#a8d4a0;box-shadow:0 0 8px #a8d4a066;
+  background:#73cf7a;box-shadow:0 0 8px #73cf7acc;
 }
 
 /* ── Name entry (step 1) ─────────────────────────────────────────────── */
