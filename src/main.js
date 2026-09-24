@@ -11,6 +11,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeLandscape,ground } from './landscape.js';
 import './style.css';
 import './features.js';
+import './chat.js';
 import { sampleWind, daylight } from './weather.js';
 import { makeNight } from './night.js';
 import { makeHouse } from './house.js';

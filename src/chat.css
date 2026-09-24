@@ -1,0 +1,156 @@
+/* ── Chat panel ──────────────────────────────────────────────────────── */
+.chat-card{
+  position:fixed;right:40px;top:99px;width:370px;z-index:5;
+  display:flex;flex-direction:column;
+  max-height:calc(100dvh - 120px);
+}
+
+/* ── Chat heading ────────────────────────────────────────────────────── */
+.chat-heading{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:14px;flex-shrink:0;
+}
+.chat-heading h2{margin:0;font-size:17px;font-weight:500}
+.chat-online{
+  font-size:10px;color:#b6c1b4;letter-spacing:.4px;
+  display:flex;align-items:center;gap:6px;
+}
+.chat-online::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:#a8d4a0;box-shadow:0 0 8px #a8d4a066;
+}
+
+/* ── Name entry (step 1) ─────────────────────────────────────────────── */
+#chat-name-step{animation:stepIn .28s ease both}
+#chat-name-step[hidden]{display:none!important}
+.chat-name-heading{
+  font-family:'Italiana',Georgia,serif;
+  font-size:30px;line-height:1.2;margin:0 0 6px;
+}
+.chat-name-intro{color:#c4cdc0;line-height:1.7;font-size:13px;margin:8px 0 18px}
+#chat-name-form .field-label{margin-bottom:0}
+#chat-name-form .submit-review{margin-top:16px}
+
+/* ── Chat room (step 2) ──────────────────────────────────────────────── */
+#chat-room-step{
+  display:flex;flex-direction:column;
+  flex:1;min-height:0;
+  animation:stepIn .28s ease both;
+}
+#chat-room-step[hidden]{display:none!important}
+
+/* ── Messages container ──────────────────────────────────────────────── */
+.chat-messages{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;gap:6px;
+  padding:4px 2px 8px;min-height:120px;
+  scrollbar-width:thin;scrollbar-color:#ffffff18 transparent;
+}
+.chat-messages::-webkit-scrollbar{width:4px}
+.chat-messages::-webkit-scrollbar-track{background:transparent}
+.chat-messages::-webkit-scrollbar-thumb{background:#ffffff20;border-radius:4px}
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+.chat-empty{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:#8a9a88;font-size:12px;line-height:1.7;
+  padding:24px 16px;
+}
+
+/* ── Message bubble ──────────────────────────────────────────────────── */
+.chat-msg{
+  max-width:82%;padding:9px 13px;border-radius:12px;
+  font-size:13px;line-height:1.55;word-break:break-word;
+  animation:msgIn .22s ease both;
+}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.chat-msg-other{
+  align-self:flex-start;
+  background:#1a2e2b;border:1px solid #e2dac615;
+  border-bottom-left-radius:4px;
+}
+.chat-msg-own{
+  align-self:flex-end;
+  background:#33463c;border:1px solid #efb9c125;
+  border-bottom-right-radius:4px;
+}
+.chat-msg-name{
+  font-size:10px;font-weight:600;color:#efb9c1;
+  margin-bottom:3px;letter-spacing:.3px;
+}
+.chat-msg-own .chat-msg-name{color:#d4c9b8}
+.chat-msg-text{color:#f0efe4}
+.chat-msg-time{
+  font-size:9px;color:#8a9a88;margin-top:4px;
+  text-align:right;font-variant-numeric:tabular-nums;
+}
+.chat-msg-own .chat-msg-time{color:#a5b09e}
+
+/* ── System messages ─────────────────────────────────────────────────── */
+.chat-msg-system{
+  align-self:center;max-width:90%;
+  background:transparent;border:none;
+  font-size:11px;color:#8a9a88;text-align:center;
+  padding:6px 0;
+}
+
+/* ── Input bar ───────────────────────────────────────────────────────── */
+.chat-input-bar{
+  display:flex;gap:8px;align-items:flex-end;
+  padding-top:10px;border-top:1px solid #e2dac620;
+  margin-top:8px;flex-shrink:0;
+}
+.chat-input{
+  flex:1;resize:none;
+  background:#0d211b66;color:#f9f2e7;
+  border:1px solid #e1e1cc30;border-radius:10px;
+  padding:10px 13px;font:inherit;font-size:13px;
+  min-height:40px;max-height:80px;
+  line-height:1.45;
+}
+.chat-input::placeholder{color:#a5b2a466}
+.chat-input:focus{outline:2px solid #f6cbd3;outline-offset:2px}
+.chat-send{
+  width:40px;height:40px;flex-shrink:0;
+  border-radius:50%;border:1px solid #ead7bd77;
+  background:#e4d4b9;color:#24372f;
+  font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .2s;
+}
+.chat-send:disabled{opacity:.45;cursor:default}
+.chat-send:not(:disabled):hover{background:#f0e2ca}
+
+/* ── Cooldown bar ────────────────────────────────────────────────────── */
+.chat-cooldown{
+  height:2px;background:#efb9c130;border-radius:2px;
+  margin-top:6px;overflow:hidden;flex-shrink:0;
+}
+.chat-cooldown-fill{
+  height:100%;width:0%;background:#efb9c1;
+  border-radius:2px;transition:width .1s linear;
+}
+
+/* ── Status line ─────────────────────────────────────────────────────── */
+.chat-status{
+  font-size:11px;color:#b6c1b4;margin-top:8px;
+  line-height:1.5;flex-shrink:0;
+}
+.chat-status:empty{display:none}
+.chat-status-error{color:#e8a9a9}
+
+/* ── Turnstile container (hidden widget) ─────────────────────────────── */
+#chat-captcha{margin:12px 0}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media(max-width:600px){
+  .chat-card{
+    right:12px;left:12px;top:75px;width:auto;
+    max-height:calc(100dvh - 105px);
+  }
+  .chat-heading h2{font-size:15px}
+  .chat-name-heading{font-size:26px}
+  .chat-msg{max-width:88%;font-size:12px}
+  .chat-input{font-size:12px;padding:9px 11px}
+}
