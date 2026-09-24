@@ -213,13 +213,45 @@ async function loadHistory() {
   renderMessages();
 }
 
+// ── Presence / Active Users ─────────────────────────────────────────────
+function updatePresenceUI(count) {
+  const textEl = $('chat-presence-text');
+  const badgeEl = $('chat-online-badge');
+
+  if (count <= 0) {
+    if (textEl) textEl.textContent = '1 user active';
+    if (badgeEl) badgeEl.textContent = 'live';
+    return;
+  }
+
+  const label = count === 1 ? '1 user active' : `${count} users active`;
+  if (textEl) textEl.textContent = label;
+  if (badgeEl) badgeEl.textContent = `live · ${count}`;
+}
+
+function handlePresenceSync() {
+  if (!channel) return;
+  const state = channel.presenceState();
+  const count = Object.keys(state).length;
+  updatePresenceUI(Math.max(1, count));
+}
+
 // ── Realtime ─────────────────────────────────────────────────────────────
 function subscribe() {
   if (channel) return;
   const client = getClient();
 
   channel = client
-    .channel('chat-room')
+    .channel('chat-room', {
+      config: {
+        presence: {
+          key: userId || ('guest-' + Math.random().toString(36).slice(2, 9)),
+        },
+      },
+    })
+    .on('presence', { event: 'sync' }, handlePresenceSync)
+    .on('presence', { event: 'join' }, handlePresenceSync)
+    .on('presence', { event: 'leave' }, handlePresenceSync)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'chat_messages' },
@@ -235,6 +267,15 @@ function subscribe() {
     )
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
+        try {
+          await channel.track({
+            user_id: userId,
+            display_name: displayName || 'Anonymous',
+            online_at: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.warn('Presence tracking error:', err);
+        }
         await loadHistory();
         setStatus('');
       }
@@ -244,12 +285,16 @@ function subscribe() {
     });
 }
 
-function unsubscribe() {
+async function unsubscribe() {
   if (channel) {
     const client = getClient();
+    try {
+      await channel.untrack();
+    } catch {}
     client.removeChannel(channel);
     channel = null;
   }
+  updatePresenceUI(0);
 }
 
 // ── Send message ─────────────────────────────────────────────────────────
