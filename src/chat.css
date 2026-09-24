@@ -147,33 +147,6 @@
 .chat-status:empty{display:none}
 .chat-status-error{color:#e8a9a9}
 
-/* ── Presence / Active users bar ─────────────────────────────────────── */
-.chat-presence-bar{
-  display:flex;align-items:center;gap:7px;
-  margin-top:8px;padding-top:8px;
-  border-top:1px solid rgba(255,255,255,0.08);
-  font-size:11px;color:#a2b1a1;letter-spacing:.3px;
-  flex-shrink:0;
-}
-.chat-presence-indicator{
-  position:relative;display:inline-flex;align-items:center;justify-content:center;
-  width:10px;height:10px;
-}
-.chat-presence-dot{
-  width:6px;height:6px;background:#73cf7a;border-radius:50%;
-  box-shadow:0 0 7px #73cf7acc;
-}
-.chat-presence-ping{
-  position:absolute;width:10px;height:10px;border-radius:50%;
-  background:rgba(115,207,122,0.4);
-  animation:presencePing 2s cubic-bezier(0,0,0.2,1) infinite;
-}
-@keyframes presencePing{
-  0%{transform:scale(0.6);opacity:0.9}
-  75%{transform:scale(1.7);opacity:0}
-  100%{transform:scale(1.7);opacity:0}
-}
-
 /* ── Turnstile container (hidden widget) ─────────────────────────────── */
 #chat-captcha{margin:12px 0}
 

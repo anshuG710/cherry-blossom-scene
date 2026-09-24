@@ -214,36 +214,50 @@ async function loadHistory() {
 }
 
 // ── Presence / Active Users ─────────────────────────────────────────────
+let presenceTimer = null;
+
 function updatePresenceUI(count) {
   const safeCount = Math.max(1, count || 1);
   const label = safeCount === 1 ? '1 user online' : `${safeCount} users online`;
-  const badgeLabel = `${safeCount} online`;
-
   const subheadEl = $('chat-subhead-count');
-  const textEl = $('chat-presence-text');
-  const badgeEl = $('chat-online-badge');
-
   if (subheadEl) subheadEl.textContent = label;
-  if (textEl) textEl.textContent = label;
-  if (badgeEl) badgeEl.textContent = badgeLabel;
 }
 
 function handlePresenceSync() {
   if (!channel) return;
   const state = channel.presenceState();
-  const keys = Object.keys(state || {});
+  if (!state) return;
 
-  // Count unique users across presences
+  const keys = Object.keys(state);
   const userSet = new Set();
+
   for (const k of keys) {
     const list = state[k] || [];
     for (const item of list) {
-      if (item && item.user_id) userSet.add(item.user_id);
+      if (item && item.user_id) {
+        userSet.add(item.user_id);
+      } else {
+        userSet.add(k);
+      }
     }
   }
 
   const count = userSet.size > 0 ? userSet.size : Math.max(1, keys.length);
   updatePresenceUI(count);
+}
+
+function startPresencePolling() {
+  clearInterval(presenceTimer);
+  presenceTimer = setInterval(() => {
+    if (channel && panelOpen) {
+      handlePresenceSync();
+    }
+  }, 2000);
+}
+
+function stopPresencePolling() {
+  clearInterval(presenceTimer);
+  presenceTimer = null;
 }
 
 // ── Realtime ─────────────────────────────────────────────────────────────
@@ -254,24 +268,20 @@ function subscribe() {
   // Set initial UI right away
   updatePresenceUI(1);
 
-  // Generate connection presence key (unique per device/tab)
-  const presenceKey = userId ? `u_${userId}_${Math.random().toString(36).slice(2, 7)}` : `guest_${Math.random().toString(36).slice(2, 9)}`;
+  channel = client.channel('safe-place-chat');
 
-  channel = client
-    .channel('chat-room', {
-      config: {
-        presence: {
-          key: presenceKey,
-        },
-      },
-    })
+  channel
     .on('presence', { event: 'sync' }, () => handlePresenceSync())
     .on('presence', { event: 'join' }, () => handlePresenceSync())
     .on('presence', { event: 'leave' }, () => handlePresenceSync())
+    .on('broadcast', { event: 'ping' }, () => handlePresenceSync())
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-      (payload) => addMessage(payload.new)
+      (payload) => {
+        addMessage(payload.new);
+        handlePresenceSync();
+      }
     )
     .on(
       'postgres_changes',
@@ -289,6 +299,12 @@ function subscribe() {
             display_name: displayName || 'Anonymous',
             online_at: new Date().toISOString(),
           });
+          // Broadcast to alert any existing clients instantly
+          channel.send({
+            type: 'broadcast',
+            event: 'ping',
+            payload: { user_id: userId },
+          }).catch(() => {});
           handlePresenceSync();
         } catch (err) {
           console.warn('Presence tracking error:', err);
@@ -300,9 +316,12 @@ function subscribe() {
         setStatus('Connection lost. Reconnecting…', true);
       }
     });
+
+  startPresencePolling();
 }
 
 async function unsubscribe() {
+  stopPresencePolling();
   if (channel) {
     const client = getClient();
     try {
@@ -439,6 +458,7 @@ function toggleChat(show) {
 function showNameStep() {
   if (nameStep) nameStep.hidden = false;
   if (roomStep) roomStep.hidden = true;
+  ensureAuth().then(() => subscribe()).catch(() => {});
   const savedName = localStorage.getItem(CHAT_NAME_KEY);
   if (nameInput) {
     nameInput.value = savedName || '';
