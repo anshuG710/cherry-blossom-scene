@@ -13,16 +13,34 @@
 </section>
 <dialog id="review-dialog" class="feature-card review-card" aria-labelledby="review-title">
   <div class="feature-heading"><span class="eyebrow">A LITTLE NOTE FROM YOU</span><button class="icon-button" id="review-close" aria-label="Close review">×</button></div>
-  <h2 id="review-title">How was your moment?</h2><p class="review-intro">Tell us what made you pause, or what could feel better.</p>
-  <form id="review-form">
-    <fieldset class="rating"><legend>Your rating</legend><div class="star-options">
-      <label><input type="radio" name="rating" value="1" required aria-label="1 star"><span>★</span></label><label><input type="radio" name="rating" value="2" aria-label="2 stars"><span>★</span></label><label><input type="radio" name="rating" value="3" aria-label="3 stars"><span>★</span></label><label><input type="radio" name="rating" value="4" aria-label="4 stars"><span>★</span></label><label><input type="radio" name="rating" value="5" aria-label="5 stars"><span>★</span></label>
-    </div></fieldset>
-    <label class="field-label">Name <span>optional</span><input id="review-name" name="name" maxlength="60" placeholder="Your name" autocomplete="given-name"></label>
-    <label class="field-label">Your review<textarea id="review-message" name="message" rows="4" minlength="3" maxlength="600" required placeholder="A thought, a feeling, a suggestion…"></textarea></label>
-    <p class="feature-note">Saved on this device only. Reviews are not sent or shared publicly.</p>
-    <button type="submit" class="submit-review">Save my review <span>↗</span></button>
-  </form>
+
+  <!-- Step 1: Name only (shown on very first visit) -->
+  <div id="review-name-step">
+    <h2 id="review-title" class="review-name-heading">Before you share,<br>what shall we call you?</h2>
+    <p class="review-intro">Just your first name is perfect — or leave it blank to stay anonymous.</p>
+    <form id="review-name-form" autocomplete="on">
+      <label class="field-label">Your name <span>optional</span>
+        <input id="review-name-input" name="name" maxlength="60" placeholder="e.g. Anshu" autocomplete="given-name">
+      </label>
+      <button type="submit" class="submit-review" id="review-name-continue">Continue <span>→</span></button>
+    </form>
+  </div>
+
+  <!-- Step 2: Full review form -->
+  <div id="review-main-step" hidden>
+    <h2 id="review-title-main">How was your moment?</h2>
+    <p class="review-intro">Tell us what made you pause, or what could feel better.</p>
+    <form id="review-form">
+      <fieldset class="rating"><legend>Your rating</legend><div class="star-options">
+        <label><input type="radio" name="rating" value="1" required aria-label="1 star"><span>★</span></label><label><input type="radio" name="rating" value="2" aria-label="2 stars"><span>★</span></label><label><input type="radio" name="rating" value="3" aria-label="3 stars"><span>★</span></label><label><input type="radio" name="rating" value="4" aria-label="4 stars"><span>★</span></label><label><input type="radio" name="rating" value="5" aria-label="5 stars"><span>★</span></label>
+      </div></fieldset>
+      <input type="hidden" id="review-name" name="name">
+      <label class="field-label">Your review<textarea id="review-message" name="message" rows="4" minlength="3" maxlength="600" required placeholder="A thought, a feeling, a suggestion…"></textarea></label>
+      <p class="feature-note">Saved on this device only. Reviews are not sent or shared publicly.</p>
+      <button type="submit" class="submit-review">Save my review <span>↗</span></button>
+    </form>
+  </div>
+
   <p id="review-status" role="status" class="review-status"></p>
   <article id="saved-review" class="saved-review" hidden><div><strong id="saved-name"></strong><span id="saved-rating"></span></div><p id="saved-message"></p><button id="review-edit">Edit my review</button> <button id="review-remove">Remove my review</button></article>
 </dialog>

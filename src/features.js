@@ -108,55 +108,130 @@ audio.addEventListener('ended',()=>skip(1,true));
 audio.addEventListener('error',()=>{$('music-status').textContent='Could not load this song. Press next to try another track.';showPlayback();});
 loadTrack();
 
-const dialog = $('review-dialog'), form = $('review-form'), storageKey = 'anshu-review-v1';
+// ── Review: two-step flow ───────────────────────────────────────────
+const dialog      = $('review-dialog');
+const form        = $('review-form');
+const nameStep    = $('review-name-step');
+const mainStep    = $('review-main-step');
+const nameForm    = $('review-name-form');
+const nameInput   = $('review-name-input');
+const storageKey  = 'anshu-review-v1';
+const nameKey     = 'anshu-reviewer-name-v1'; // persists name independently
+
 let saved;
+let reviewerName = localStorage.getItem(nameKey) || null; // null = first time
+
 try {
   const value = JSON.parse(localStorage.getItem(storageKey));
   if (value && Number.isInteger(value.rating) && value.rating >= 1 && value.rating <= 5 &&
-    typeof value.message === 'string' && value.message.length <= 600 && typeof value.name === 'string' && value.name.length <= 60) saved = value;
-} catch { /* The form remains usable when storage is unavailable. */ }
+    typeof value.message === 'string' && value.message.length <= 600 &&
+    typeof value.name === 'string' && value.name.length <= 60) saved = value;
+} catch { /* form remains usable when storage is unavailable */ }
+
+/** Show step 1 (name) or step 2 (review) depending on context. */
+function showStep(step) {
+  const onName = step === 'name';
+  nameStep.hidden = !onName;
+  mainStep.hidden = onName;
+  if (onName) {
+    nameInput.value = reviewerName || '';
+    setTimeout(() => nameInput.focus(), 80);
+  }
+}
+
+/** Transition into the main review form, carrying the name forward. */
+function enterMainStep(name) {
+  reviewerName = name;
+  try { localStorage.setItem(nameKey, name); } catch {}
+  $('review-name').value = name;          // hidden input on review form
+  showStep('main');
+  renderReview();
+  if (!saved) setTimeout(() => $('review-message').focus(), 80);
+}
 
 function renderReview() {
-  form.hidden = !!saved; $('saved-review').hidden = !saved;
-  if (!saved) return;
-  $('saved-name').textContent = saved.name || 'Your review';
-  $('saved-rating').textContent = '★'.repeat(saved.rating) + '☆'.repeat(5 - saved.rating);
+  // If a saved review exists, hide the form and show the saved article.
+  const hasSaved = !!saved;
+  form.hidden = hasSaved;
+  $('saved-review').hidden = !hasSaved;
+  if (!hasSaved) return;
+  $('saved-name').textContent    = saved.name || 'Your review';
+  $('saved-rating').textContent  = '★'.repeat(saved.rating) + '☆'.repeat(5 - saved.rating);
   $('saved-rating').setAttribute('aria-label', `${saved.rating} out of 5 stars`);
   $('saved-message').textContent = saved.message;
   $('review-status').textContent = 'Thank you for sharing a little of your moment. Saved on this device.';
 }
-renderReview();
-$('review-open').addEventListener('click', () => dialog.showModal());
+
+/** Open dialog: show name step only on very first visit; otherwise go straight to review. */
+$('review-open').addEventListener('click', () => {
+  dialog.showModal();
+  if (reviewerName === null) {
+    // First time ever — ask for name
+    showStep('name');
+  } else {
+    // Returning visitor — jump straight to review
+    enterMainStep(reviewerName);
+  }
+});
+
+// Name form: pressing Continue (or Enter) advances to step 2
+nameForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const name = nameInput.value.trim().slice(0, 60);
+  enterMainStep(name);
+});
+
 $('review-close').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => {
   const bounds = dialog.getBoundingClientRect();
-  if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close();
+  if (event.target === dialog &&
+    (event.clientX < bounds.left || event.clientX > bounds.right ||
+     event.clientY < bounds.top  || event.clientY > bounds.bottom)) dialog.close();
 });
+
 function highlightStars(value) {
-  for (const radio of form.querySelectorAll('[name=rating]')) radio.parentElement.classList.toggle('selected', +radio.value <= value);
+  for (const radio of form.querySelectorAll('[name=rating]'))
+    radio.parentElement.classList.toggle('selected', +radio.value <= value);
 }
 form.addEventListener('change', () => highlightStars(+(new FormData(form).get('rating') || 0)));
 $('review-message').addEventListener('input', () => $('review-message').setCustomValidity(''));
+
 form.addEventListener('submit', event => {
   event.preventDefault();
   const data = new FormData(form), message = String(data.get('message') || '').trim();
-  if (message.length < 3) { $('review-message').setCustomValidity('Please write at least three characters.'); form.reportValidity(); return; }
-  const review = {name: String(data.get('name') || '').trim().slice(0,60), message: message.slice(0,600), rating: +data.get('rating')};
+  if (message.length < 3) {
+    $('review-message').setCustomValidity('Please write at least three characters.');
+    form.reportValidity(); return;
+  }
+  const review = {
+    name:    String(data.get('name') || reviewerName || '').trim().slice(0, 60),
+    message: message.slice(0, 600),
+    rating:  +data.get('rating')
+  };
   if (!Number.isInteger(review.rating) || review.rating < 1 || review.rating > 5) return;
   try {
-    localStorage.setItem(storageKey, JSON.stringify(review)); saved = review; renderReview(); $('review-edit').focus();
-  } catch { $('review-status').textContent = 'Your browser could not save this review. Please allow local storage and try again. Your text is still here.'; }
+    localStorage.setItem(storageKey, JSON.stringify(review));
+    saved = review; renderReview(); $('review-edit').focus();
+  } catch {
+    $('review-status').textContent = 'Your browser could not save this review. Please allow local storage and try again. Your text is still here.';
+  }
 });
+
 $('review-edit').addEventListener('click', () => {
   form.hidden = false; $('saved-review').hidden = true; $('review-status').textContent = '';
-  $('review-name').value = saved.name; $('review-message').value = saved.message;
+  $('review-name').value = saved.name;
+  $('review-message').value = saved.message;
   form.querySelector(`[name=rating][value="${saved.rating}"]`).checked = true;
   highlightStars(saved.rating); $('review-message').focus();
 });
+
 $('review-remove').addEventListener('click', () => {
   try {
-    localStorage.removeItem(storageKey); saved = undefined; form.reset(); highlightStars(0); renderReview();
+    localStorage.removeItem(storageKey);
+    saved = undefined; form.reset(); highlightStars(0); renderReview();
     $('review-status').textContent = 'Your saved review has been removed.';
-  } catch { $('review-status').textContent = 'Your browser could not remove the saved review. Please try again.'; }
+  } catch {
+    $('review-status').textContent = 'Your browser could not remove the saved review. Please try again.';
+  }
 });
 window.addEventListener('pagehide', () => { void pause(); });
