@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { daylight } from './weather.js';
+import { makeLivingRoom } from './living-room.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function box(w, h, d, mat, parent, x = 0, y = 0, z = 0) {
@@ -16,7 +17,7 @@ function houseMaterials() {
   const wallCanvas = document.createElement('canvas');
   wallCanvas.width = wallCanvas.height = 256;
   const wCtx = wallCanvas.getContext('2d');
-  wCtx.fillStyle = '#8f6414';
+  wCtx.fillStyle = '#c6b794';
   wCtx.fillRect(0, 0, 256, 256);
   // Subtle plaster texture
   for (let i = 0; i < 4000; i++) {
@@ -85,6 +86,10 @@ function houseMaterials() {
 
   // Stone path
   const pathStone = new THREE.MeshStandardMaterial({ color: '#9b9585', roughness: 0.92 });
+  for(const material of [timber,door,fence])material.onBeforeCompile=shader=>{
+    shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 woodPosition;').replace('#include <begin_vertex>','#include <begin_vertex>\nwoodPosition=position;');
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 woodPosition;').replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=sin(woodPosition.x*155.+woodPosition.z*127.+sin(woodPosition.y*4.)*2.);diffuseColor.rgb*=.88+.08*grain;');
+  };
 
   return { wall, timber, roof, stone, glass, door, iron, lanternGlass, fence, pathStone };
 }
@@ -617,14 +622,29 @@ export function makeHouse(scene, ground) {
     }
   }
 
+  const living=makeLivingRoom(houseGroup);
+  let exteriorState=null;
+  // Hide the exterior only during the fixed interior shot on narrow screens,
+  // where framing the entire TV can place the camera behind the front wall.
+  const shell=houseGroup.children.filter(child=>child!==living.seat.parent);
   // ── Update function — drives lanterns by day/night ──
   return {
+    living,
+    setInterior(on){
+      if(on&&!exteriorState){
+        exteriorState=scene.children.filter(child=>child!==houseGroup&&!child.isLight&&!child.isCamera).map(child=>[child,child.visible]);
+        for(const [child] of exteriorState)child.visible=false;
+        scene.background=new THREE.Color('#c7b99d');
+      }else if(!on&&exteriorState){for(const [child,visible] of exteriorState)child.visible=visible;exteriorState=null;scene.background=null;}
+      for(const part of shell)part.visible=!on;living.setActive(on);
+    },
     update(settings, time) {
       const { night } = daylight(settings.day);
       const dusk = THREE.MathUtils.smoothstep(settings.day, 0.56, 0.88);
 
       for (let i = 0; i < lanterns.length; i++) {
         const l = lanterns[i];
+        l.light.visible=dusk>.01;
         // Warm glow that comes on at dusk, with subtle flicker
         const flicker = 1 + Math.sin(time * 3.1 + i * 1.7) * 0.03 + Math.sin(time * 7.3 + i * 2.9) * 0.015;
         l.light.intensity = dusk * 3.5 * flicker;

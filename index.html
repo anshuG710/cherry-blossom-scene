@@ -1,10 +1,25 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#182c2c"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="description" content="A living landscape. Explore a cherry blossom river valley in real-time 3D."><title>Safe Place — A moment in nature</title><link rel="icon" type="image/x-icon" href="./favicon.ico"><link rel="shortcut icon" href="./favicon.ico"><link rel="icon" type="image/png" href="./favicon.png"><link rel="apple-touch-icon" href="./favicon.png"></head><body>
-<canvas id="scene" aria-label="Interactive cherry blossom river valley. Drag to orbit and scroll to zoom."></canvas>
+<canvas id="scene" aria-label="Interactive cherry blossom river valley. Drag to orbit 360 degrees and scroll to zoom."></canvas>
 <div id="loading"><span class="flower">✳</span><p>Growing a little stillness…</p></div>
+<div class="explore-tools" id="avatar-tools" hidden><button id="walk-toggle" aria-pressed="false">Walk around</button><button id="fish-toggle">Fish</button><button id="benches-toggle" aria-expanded="false">Benches</button><span id="walk-status" role="status"></span></div>
+<div id="walk-pad" aria-label="Walking controls" hidden><div id="joystick" role="group" aria-label="Drag joystick to walk. Keyboard: WASD or arrow keys."><span id="joystick-knob"></span></div><small>Drag to walk · WASD / arrows</small></div>
+<p id="activity-status" role="status"></p>
+<section id="bench-panel" class="feature-card" aria-label="Benches and shared listening" hidden>
+ <div class="feature-heading"><h2>By the river</h2><button id="benches-close" class="icon-button" aria-label="Close benches">×</button></div>
+ <label>Choose a bench <select id="bench-choice"><option value="0">Blossom bench</option><option value="1">Riverside bench</option></select></label>
+ <button id="bench-go">Walk to this bench &amp; sit</button>
+ <p>Join Chat to meet online visitors. Ask before sharing their bench and song.</p>
+ <button id="bench-online">Join online / open chat</button><button id="bench-offline" hidden>Go offline</button>
+ <label>Online listeners <select id="bench-peers"><option value="">No listeners connected</option></select></label>
+ <button id="bench-request">Ask to sit &amp; listen together</button>
+ <p id="bench-status" role="status"></p>
+ <div id="bench-invitation" hidden><p id="bench-invitation-text"></p><button id="bench-accept">Accept</button><button id="bench-decline">Decline</button></div>
+ <button id="bench-leave" hidden>Leave shared listening</button>
+</section>
 <header><a class="brand" href="./" aria-label="Safe Place home"><span class="brand-mark">✳</span><span>SAFE PLACE<small>A MOMENT IN NATURE</small></span></a><div class="top-right"><button class="feature-button" id="music-open" aria-expanded="false" aria-controls="music-card">♫ <span>Listen</span></button><button class="feature-button" id="review-open" aria-label="Leave a review">☆ <span>Review</span></button><button class="feature-button" id="chat-open" aria-expanded="false" aria-controls="chat-card">💬 <span>Chat</span></button><button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen">⛶</button></div></header>
 <section id="music-card" class="feature-card music-card compact-player" aria-label="Music player" hidden>
-  <div class="player-heading"><h2 id="track-name">Peaceful Song</h2><div class="header-actions"><button class="icon-button" id="music-minimize" aria-label="Minimize view (music keeps playing)" title="Wrap/Hide view (music continues playing)">−</button><button class="icon-button" id="music-close" aria-label="Turn off music and close" title="Turn off music and exit">×</button></div></div>
+  <p class="tv-eyebrow">SAFE PLACE · LIVING ROOM</p><div class="player-heading"><h2 id="track-name">Peaceful Song</h2><div class="header-actions"><button class="icon-button" id="music-minimize" aria-label="Hide TV controls (music keeps playing)" title="Hide TV controls">−</button><button class="icon-button" id="music-close" aria-label="Turn off music and return outside" title="Return outside">×</button></div></div>
   <input id="music-seek" aria-label="Song position" type="range" min="0" max="1" step="0.1" value="0" disabled>
   <div class="song-times"><span id="music-elapsed">0:00</span><span id="music-duration">0:00</span></div>
   <div class="transport"><button id="music-shuffle" aria-label="Shuffle" aria-pressed="true" title="Shuffle on">⤨</button><button id="music-previous" aria-label="Previous song" title="Previous song">❮❮</button><button id="music-play" class="play-button" aria-label="Play music">▶</button><button id="music-next" aria-label="Next song" title="Next song">❯❯</button><span aria-hidden="true"></span></div>
@@ -91,6 +106,6 @@
 <label>Fog amount <output id="fog-value">35%</output><input aria-label="Fog amount" id="fog" type="range" min="0" max="1" step="0.01" value="0.35"></label>
 <label>Bloom intensity <output id="bloom-value">30%</output><input aria-label="Bloom intensity" id="bloom" type="range" min="0" max="1" step="0.01" value="0.3"></label>
 <div class="camera-controls"><button id="cinematic" role="switch" aria-checked="false"><span class="toggle"><i></i></span>Cinematic camera</button><button id="reset"><span>↺</span> Reset camera</button></div>
-</div></section><footer><span><b>↔</b> Drag to explore <i>·</i> Scroll to wander closer</span><span id="quality">REAL-TIME 3D <i> / </i> MADE FOR A DEEP BREATH</span></footer>
+</div></section><footer><span><b>↔</b> Drag to explore 360° <i>·</i> Scroll to wander closer</span><span id="quality">REAL-TIME 3D <i> / </i> MADE FOR A DEEP BREATH</span></footer>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script type="module" src="/src/main.js"></script></body></html>

@@ -13,7 +13,7 @@ Open the local URL printed by Vite. `npm run build` creates the production bundl
 
 ## Controls
 
-Drag to orbit; scroll or pinch to zoom. The bottom panel adjusts wind, petals, river flow, daylight, fog and bloom. Cinematic camera slowly orbits; manual camera interaction disables it. Reset camera eases back to the opening composition.
+Drag to orbit a full 360°; scroll or pinch to zoom. The bottom panel adjusts wind, petals, river flow, daylight, fog and bloom. Cinematic camera slowly rotates through a continuous 360° orbit; manual camera interaction disables it. Reset camera eases back to the opening composition.
 
 ## Implementation
 
@@ -32,9 +32,19 @@ Wind rotates through all directions with shared local gusts across the canopy, g
 
 The Listen panel plays an original, procedurally generated ambient melody using Web Audio after the visitor presses play. It has pause and volume controls and can also loop an audio file chosen from the visitor's device; files are never uploaded. The review card saves one editable star rating and note in browser local storage, with a remove option. These are device-local reviews, not submissions to a server or a shared public review feed.
 
-## Bench listening sequence
+## Living room listening sequence
 
-Click Listen to move the camera to the bench, watch the character sit and put on headphones, and start the ambient preview. Return to landscape or Reset camera cancels the sequence and playback. To add the final song, put it in `public/music/` and set `url`, `title`, and `description` in `src/music-config.js`. A browser that blocks delayed media playback may require pressing Play once the character is seated.
+Click Listen to enter the house's living hall. The avatar sits on the sofa and the player appears on the physical TV, with play/pause, previous/next, shuffle, seeking and volume. Return outside, close the TV player, or reset the camera to leave and stop playback. The exterior is cut away for the interior camera so the screen stays visible on narrow displays. A browser that blocks delayed playback may require pressing Play on the TV.
+
+## Explore on foot
+
+Choose **Walk around**, then use WASD / arrow keys, click or tap clear ground, or hold the on-screen direction buttons. Drag to orbit the follow camera; scroll or pinch to zoom. Click destinations route around the house and tree trunks and across the wooden bridge. Riverbanks, bridge rails and the exterior house boundary constrain movement. Movement pauses while entering text, opening a dialog, or leaving the tab. Use Listen to enter the living room; free walking is outdoors.
+
+Both blossom trees use the same wind, lighting, glow and petal simulation. The far-bank tree has a narrower, taller, asymmetrical crown. The arched bridge includes individual wood-grained planks, railings, supports and fasteners; the living room includes woven cushions, a rug, wooden flooring, a coffee table, a book, a cup, a plant and a floor lamp.
+
+## Adaptive rendering
+
+Device CPU/memory hints and input capabilities choose the starting budget. Sustained slow frames reduce render resolution, shadow cost, reflection frequency, blossom density, grass and petals. Stable recovery can restore quality up to the starting budget. Eco and Balanced bypass the post-processing passes; High includes bloom and color grading. Pixel count is capped on large displays, and background tabs skip simulation/rendering. The footer reports the current budget and measured FPS. These are best-effort budgets, not an FPS guarantee; the scene still requires WebGL2. `npm test` covers bridge routing, collisions and quality adaptation in addition to the environment simulation.
 
 Petal intensity controls both the number of airborne petals and their descent rate. Landed petals have a separate bounded pool, so accumulation no longer reduces the continuing fall. Ground petals remain visible for up to 100 seconds before recycling.
 

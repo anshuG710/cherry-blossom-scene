@@ -6,6 +6,8 @@
  */
 import './chat.css';
 import { createClient } from '@supabase/supabase-js';
+import { makeBenchSocial } from './bench-social.js';
+const benchSocial=makeBenchSocial();
 
 // ── Config ──────────────────────────────────────────────────────────────
 const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL  || 'https://mayqrvnkocoqtllsekju.supabase.co';
@@ -226,6 +228,7 @@ function updatePresenceUI(count) {
 function handlePresenceSync() {
   if (!channel) return;
   const state = channel.presenceState();
+  benchSocial.presence(state);
   if (!state) return;
 
   const keys = Object.keys(state);
@@ -271,6 +274,7 @@ function subscribe() {
   channel = client.channel('safe-place-chat');
 
   channel
+    .on('broadcast', { event: 'bench' }, ({payload}) => benchSocial.receive(payload))
     .on('presence', { event: 'sync' }, () => handlePresenceSync())
     .on('presence', { event: 'join' }, () => handlePresenceSync())
     .on('presence', { event: 'leave' }, () => handlePresenceSync())
@@ -293,12 +297,8 @@ function subscribe() {
     )
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
+        benchSocial.connected(channel,displayName);
         try {
-          await channel.track({
-            user_id: userId,
-            display_name: displayName || 'Anonymous',
-            online_at: new Date().toISOString(),
-          });
           // Broadcast to alert any existing clients instantly
           channel.send({
             type: 'broadcast',
@@ -313,6 +313,7 @@ function subscribe() {
         setStatus('');
       }
       if (status === 'CHANNEL_ERROR') {
+        benchSocial.disconnected();
         setStatus('Connection lost. Reconnecting…', true);
       }
     });
@@ -321,6 +322,7 @@ function subscribe() {
 }
 
 async function unsubscribe() {
+  benchSocial.disconnected();
   stopPresencePolling();
   if (channel) {
     const client = getClient();
@@ -449,16 +451,13 @@ function toggleChat(show) {
       showNameStep();
     }
   } else {
-    // Disconnect when panel closes
-    unsubscribe();
-    stopExpirySweep();
+    // Keep the joined visitor online while exploring and listening together.
   }
 }
 
 function showNameStep() {
   if (nameStep) nameStep.hidden = false;
   if (roomStep) roomStep.hidden = true;
-  ensureAuth().then(() => subscribe()).catch(() => {});
   const savedName = localStorage.getItem(CHAT_NAME_KEY);
   if (nameInput) {
     nameInput.value = savedName || '';
@@ -475,6 +474,7 @@ async function enterChatRoom() {
   try {
     await ensureAuth();
     subscribe();
+    if(channel?.state==='joined')benchSocial.connected(channel,displayName);
     startExpirySweep();
     if (msgInput) setTimeout(() => msgInput.focus(), 120);
   } catch (err) {
@@ -490,6 +490,8 @@ if (openBtn) {
 if (closeBtn) {
   closeBtn.addEventListener('click', () => toggleChat(false));
 }
+$('bench-online').addEventListener('click',()=>toggleChat(true));
+$('bench-offline').addEventListener('click',()=>{toggleChat(false);unsubscribe();stopExpirySweep();});
 
 if (nameForm) {
   nameForm.addEventListener('submit', (e) => {
@@ -550,11 +552,7 @@ window.addEventListener('pagehide', () => {
 // Re-sync presence when returning to the tab on mobile
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && panelOpen && channel) {
-    channel.track({
-      user_id: userId,
-      display_name: displayName || 'Anonymous',
-      online_at: new Date().toISOString(),
-    }).catch(() => {});
+    benchSocial.connected(channel,displayName);
     handlePresenceSync();
   }
 });

@@ -6,6 +6,7 @@ const $ = id => document.getElementById(id);
 const player = $('music-card'), audio = new Audio();
 audio.preload='metadata';audio.volume=.35;
 let sequencePending=false,atBench=false,playbackEpoch=0,shuffle=true;
+let following=false,sharedSnapshot=null;
 let order=makePlayOrder(tracks.length,0,shuffle),cursor=0;
 function timeLabel(seconds){
  if(!Number.isFinite(seconds))return '0:00';
@@ -68,10 +69,10 @@ if(minBtn) minBtn.addEventListener('click', () => togglePlayer(false));
 
 window.addEventListener('anshu:listen-ready',async()=>{
  if(!sequencePending)return;sequencePending=false;atBench=true;
- await startPlayback();$('music-play').disabled=false;
+ if(following&&sharedSnapshot)applyShared(sharedSnapshot);else await startPlayback();$('music-play').disabled=false;
 });
 window.addEventListener('anshu:listen-cancel',()=>{
- sequencePending=false;atBench=false;$('music-play').disabled=false;pause();$('music-status').textContent='';
+ sequencePending=false;atBench=false;$('music-play').disabled=false;pause();togglePlayer(false);$('music-status').textContent='';
 });
 $('music-close').addEventListener('click',()=>{
  pause();
@@ -107,6 +108,24 @@ for(const event of ['play','pause','ended'])audio.addEventListener(event,showPla
 audio.addEventListener('ended',()=>skip(1,true));
 audio.addEventListener('error',()=>{$('music-status').textContent='Could not load this song. Press next to try another track.';showPlayback();});
 loadTrack();
+
+function snapshot(){window.dispatchEvent(new CustomEvent('anshu:audio-snapshot',{detail:{track:order[cursor],position:audio.currentTime,playing:!audio.paused&&!audio.ended,sentAt:Date.now()}}));}
+function applyShared(state){
+ sharedSnapshot=state;if(!following||!atBench)return;
+ if(order[cursor]!==state.track){order=makePlayOrder(tracks.length,state.track,false);cursor=0;loadTrack();}
+ if(audio.readyState<1)return;
+ const delay=state.playing?Math.min(5,Math.max(0,(Date.now()-state.sentAt)/1000)):0;
+ const position=Math.min(Number.isFinite(audio.duration)?audio.duration:Infinity,state.position+delay);
+ if(Math.abs(audio.currentTime-position)>.8)audio.currentTime=position;
+ if(state.playing&&audio.paused)startPlayback();else if(!state.playing&&!audio.paused)pause();
+}
+function sharedControls(on){for(const id of ['music-next','music-previous','music-shuffle','music-seek'])$(id).disabled=on;}
+window.addEventListener('anshu:shared-start',()=>{following=true;sharedSnapshot=null;sequencePending=true;atBench=false;pause();togglePlayer(true);sharedControls(true);$('music-status').textContent='Walking to your companion. Music will sync once seated.';});
+window.addEventListener('anshu:shared-music',e=>{applyShared(e.detail);sharedControls(true);});
+window.addEventListener('anshu:shared-end',()=>{following=false;sharedSnapshot=null;sharedControls(false);$('music-seek').disabled=!Number.isFinite(audio.duration);});
+audio.addEventListener('loadedmetadata',()=>{if(following&&sharedSnapshot)applyShared(sharedSnapshot);});
+for(const event of ['play','pause','seeked'])audio.addEventListener(event,snapshot);
+setInterval(()=>{if(atBench)snapshot();},2000);
 
 // ── Review: two-step flow ───────────────────────────────────────────
 const dialog      = $('review-dialog');

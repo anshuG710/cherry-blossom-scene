@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-export function makeBench(scene, ground) {
+export function makeBench(scene, ground, place={x:-6.1,z:-4.5,angle:-.18}) {
   const bench = new THREE.Group();
-  bench.position.set(-6.1, ground(-6.1, -4.5), -4.5);
-  bench.rotation.y = -.18;
+  bench.position.set(place.x, ground(place.x, place.z), place.z);
+  bench.rotation.y = place.angle;
   const wood = new THREE.MeshStandardMaterial({color: '#aa7950', roughness: .82});
   wood.onBeforeCompile = shader => {
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 plankPosition;')

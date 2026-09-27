@@ -72,11 +72,16 @@ export function makeEcosystem(scene, bench, water, mobile) {
   const glow = new THREE.MeshStandardMaterial({color:'#fff0bb',emissive:'#ffbf5e',emissiveIntensity:0,roughness:.6});
   oval(lantern,glow,[0,-.06,0],[.07,.16,.07]);
   const lamp = new THREE.PointLight('#ffc078',0,16,2);lantern.add(lamp);
-  const wind={};let sway=0,velocity=0,fishClock=0;
-  return { update(dt,time,settings) {
+  const wind={};let sway=0,velocity=0,fishClock=0,lastTime=0;
+  return { catchFish(target){
+    const available=fish.filter(f=>!f.caughtUntil||f.caughtUntil<=lastTime).sort((a,b)=>a.root.position.distanceToSquared(target)-b.root.position.distanceToSquared(target));
+    if(!available.length)return null;available[0].caughtUntil=lastTime+45;available[0].root.visible=false;return {name:'River trout',length:Math.round(18+Math.random()*18)};
+  }, update(dt,time,settings) {
+    lastTime=time;
     const {night}=daylight(settings.day), activity=1-night*.65;
     fishClock+=dt*activity*(.65+settings.river*.35);
     fish.forEach(({root,tail},i)=>{
+      root.visible=!(fish[i].caughtUntil>time);if(!root.visible)return;
       const p=fishPosition(fishClock,i), next=fishPosition(fishClock+.04,i);
       root.position.copy(p);root.lookAt(next);tail.rotation.y=Math.sin(time*(4+settings.river)+i)*.4;
     });

@@ -43,6 +43,7 @@ export function makeListener(bench) {
   function bone(mesh,start,end,radius){a.fromArray(start);b.fromArray(end);mesh.position.copy(a).add(b).multiplyScalar(.5);const length=a.distanceTo(b);mesh.quaternion.setFromUnitVectors(up,b.sub(a).normalize());mesh.scale.y=length/(1+radius*2);}
   const smooth=(x)=>{x=THREE.MathUtils.clamp(x,0,1);return x*x*(3-2*x);};
   function update(seconds,playing=false){
+    headphones.visible=true;
     const sit=smooth((seconds-1.1)/1.6),wear=smooth((seconds-2.9)/1.5),lower=smooth((seconds-4.4)/.7);
     root.position.z=THREE.MathUtils.lerp(.8,0,sit);
     const hipY=THREE.MathUtils.lerp(1.10,1.0,sit),lean=Math.sin(sit*Math.PI)*.12;
@@ -65,5 +66,21 @@ export function makeListener(bench) {
     }
   }
   update(0);
-  return {root,update};
+  function walk(seconds, moving) {
+    headphones.visible=false;
+    const stride=moving?Math.sin(seconds*9):0, bob=moving?Math.abs(Math.sin(seconds*9))*.035:0;
+    pelvis.position.y=1.05+bob;torso.position.set(0,1.36+bob,0);torso.rotation.x=moving?.04:0;
+    head.position.set(0,1.82+bob,0);head.rotation.x=0;neck.position.set(0,1.68+bob,0);
+    for(const leg of legs){const x=leg.side*.145,s=stride*leg.side;
+      bone(leg.thigh,[x,1.05+bob,0],[x,.59, s*.22],.105);
+      bone(leg.shin,[x,.59,s*.22],[x,.15+Math.max(0,s)*.14,s*.4],.08);
+      leg.foot.position.set(x,.08+Math.max(0,s)*.14,.1+s*.4);
+    }
+    for(const arm of arms){const x=arm.side*.3,s=-stride*arm.side;
+      bone(arm.upper,[x,1.55+bob,0],[x,.99+bob,s*.16],.075);
+      bone(arm.fore,[x,.99+bob,s*.16],[x,.76+bob,s*.3],.057);
+      arm.hand.position.set(x,.74+bob,s*.3);
+    }
+  }
+  return {root,update,walk};
 }

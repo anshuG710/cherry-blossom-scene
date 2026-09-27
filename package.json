@@ -8,7 +8,7 @@
     "build": "vite build",
     "export:html": "node scripts/export-html.mjs",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node test/landscape.test.js"
+    "test": "node test/landscape.test.js && node test/exploration.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",

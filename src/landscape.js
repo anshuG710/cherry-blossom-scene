@@ -3,6 +3,7 @@ import { sampleWind, advancePetal } from './weather.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Water } from 'three/addons/objects/Water.js';
 import { blossomGeometry, blossomMaterial, barkMaterial, detailWater } from './details.js';
+import { secondTree } from './places.js';
 
 let seed = 41729;
 const rand = () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
@@ -24,12 +25,12 @@ function taper(points,radius){
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
 }
 export function makeLandscape(scene,renderer,mobile){
- const anim={branches:[],water:null,grass:null,clouds:[],petals:null,ridgeMaterials:[]};
+ const anim={branches:[],water:null,grass:null,clouds:[],petals:null,ridgeMaterials:[],flowerMeshes:[],quality:1};
  const terrainMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});anim.terrainMaterial=terrainMat;
  // Separate riverbanks share the exact water boundary, including through bends.
  for(const side of [-1,1]){const verts=[],cols=[],indices=[], nx=90,nz=220;
   for(let j=0;j<=nz;j++){const z=65-j;for(let i=0;i<=nx;i++){const d=i/nx;const x=riverX(z)+side*(riverWidth(z)+d*d*125);const y=ground(x,z);verts.push(x,y,z);const variation=noise(x,z);color.setHSL(.235+variation*.025,.37+rand()*.16,.18+rand()*.045+variation*.02);if(i<3)color.lerp(new THREE.Color('#9b9075'),.68-i*.17);cols.push(color.r,color.g,color.b);if(i<nx&&j<nz){const a=j*(nx+1)+i;indices.push(a,a+nx+1,a+1,a+1,a+nx+1,a+nx+2);}}}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));g.setIndex(indices);g.computeVertexNormals();const m=mesh(g,terrainMat,scene);m.material.side=THREE.DoubleSide;m.receiveShadow=true;
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));g.setIndex(indices);g.computeVertexNormals();const m=mesh(g,terrainMat,scene);m.material.side=THREE.DoubleSide;m.receiveShadow=true;m.userData.walkSurface=true;
  }
  // An eroded, ridged mountain massif: layered irregular peaks, with slope-dependent snow.
  const peaks=[[-76,-146,43,29],[-49,-169,59,31],[-12,-163,70,31],[22,-175,80,30],[56,-162,54,29],[87,-187,69,38],[-112,-184,60,39]];
@@ -50,35 +51,41 @@ export function makeLandscape(scene,renderer,mobile){
  const detailLight={value:1};anim.detailLight=detailLight;
  const foamMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{time:{value:0},detailLight},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec2 vUv;uniform float time;uniform float detailLight;void main(){float x=vUv.x;float z=vUv.y*150.+time*1.4;float wave=sin(z*4.+sin(x*57.+z*.3)*2.);float ribbon=pow(max(0.,wave),24.)*pow(max(0.,sin(x*81.+sin(z*.18)*3.)),14.);float edges=pow(abs(x-.5)*2.,16.)*.23;gl_FragColor=vec4(vec3(.85,.94,.84)*detailLight,ribbon*.20+edges*(.4+.3*sin(z*2.)));}`});mesh(foamG,foamMat,scene);anim.foam=foamMat;
  const bark=barkMaterial();
- const tree=new THREE.Group();tree.position.set(-2,ground(-2,-3)-.08,-3);tree.scale.setScalar(1.35);scene.add(tree);
- const trunkPts=[new THREE.Vector3(0,0,0),new THREE.Vector3(-.65,2,.2),new THREE.Vector3(-.25,4,.05),new THREE.Vector3(.6,6.3,-.2),new THREE.Vector3(1,8,-.3)];
- const trunk=mesh(taper(trunkPts,.82),bark,tree);trunk.castShadow=true;trunk.receiveShadow=true;
- for(let i=0;i<9;i++){const a=i/9*Math.PI*2;const p=[new THREE.Vector3(Math.cos(a)*2.4,0,Math.sin(a)*2),new THREE.Vector3(Math.cos(a)*1.1,.2,Math.sin(a)*.9),new THREE.Vector3(0,.85,0)];const m=mesh(taper(p.reverse(),.23),bark,tree);m.castShadow=true;}
  const blossomGeo=blossomGeometry(!mobile);const blossomMat=blossomMaterial();blossomMat.emissiveMap=blossomMat.map;anim.blossomMaterial=blossomMat;
  const fallenMat=blossomMat.clone();fallenMat.emissiveIntensity=0;anim.fallenMaterial=fallenMat;
  const petalSources=[];
  const leafGeo=new THREE.IcosahedronGeometry(1,0);
  const leafMat=new THREE.MeshStandardMaterial({color:'#718263',vertexColors:false,side:THREE.DoubleSide,roughness:.88});
+ for(let treeIndex=0;treeIndex<2;treeIndex++){
+ const tree=new THREE.Group();const tx=treeIndex?secondTree.x:-2,tz=treeIndex?secondTree.z:-3;
+ tree.position.set(tx,ground(tx,tz)-.08,tz);tree.scale.set(treeIndex?1.05:1.35,treeIndex?1.5:1.35,treeIndex?.92:1.35);tree.rotation.y=treeIndex?1.7:0;scene.add(tree);
+ const trunkPts=[new THREE.Vector3(0,0,0),new THREE.Vector3(-.65,2,.2),new THREE.Vector3(-.25,4,.05),new THREE.Vector3(.6,6.3,-.2),new THREE.Vector3(1,8,-.3)];
+ const trunk=mesh(taper(trunkPts,.82),bark,tree);trunk.castShadow=true;trunk.receiveShadow=true;
+ for(let i=0;i<9;i++){const a=i/9*Math.PI*2;const p=[new THREE.Vector3(Math.cos(a)*2.4,0,Math.sin(a)*2),new THREE.Vector3(Math.cos(a)*1.1,.2,Math.sin(a)*.9),new THREE.Vector3(0,.85,0)];const m=mesh(taper(p.reverse(),.23),bark,tree);m.castShadow=true;}
  // Two staggered branch rings fill the whole crown, including its back and upper center.
  for(let b=0;b<20;b++){
   const outer=b<12,ringIndex=outer?b:b-12,ringCount=outer?12:8;
   const angle=(ringIndex+(outer?0:.5))/ringCount*Math.PI*2+.15;
   const group=new THREE.Group();group.position.set(-.15+Math.cos(angle)*.17,outer?4.3+(b%3)*.28:6.3+(b%3)*.35,Math.sin(angle)*.17);tree.add(group);
   anim.branches.push({group,phase:range(0,6),amp:range(.008,.016)});
-  const reach=outer?range(5.4,6.9):range(2.6,4.1);
+  const reach=(outer?range(5.4,6.9):range(2.6,4.1))*(treeIndex?(.8+.22*Math.sin(angle*2)):1);
   const end=new THREE.Vector3(Math.cos(angle)*reach,outer?range(2.4,3.3):range(2.2,3.3),Math.sin(angle)*reach*range(.87,1.04));
   const geos=[],tips=[];const base=new THREE.Vector3();
   geos.push(taper([base,new THREE.Vector3(end.x*.2,1.2,end.z*.2),new THREE.Vector3(end.x*.67,end.y*.82,end.z*.75),end],outer?.29:.17));
   function twig(start,dir,length,r,depth){const finish=start.clone().addScaledVector(dir,length);const mid=start.clone().lerp(finish,.5);mid.y+=length*.16;geos.push(taper([start,mid,finish],r));if(depth===0){tips.push(finish);return;}for(let k=0;k<3;k++){const d=dir.clone().add(new THREE.Vector3(range(-.65,.65),range(-.1,.65),range(-.65,.65))).normalize();twig(finish,d,length*range(.5,.72),r*.48,depth-1);}}
   for(let j=0;j<5;j++){const t=.36+j*.14;const start=end.clone().multiplyScalar(t);start.y+=.3;const d=new THREE.Vector3(Math.cos(angle+range(-1.2,1.2))*.8,outer?range(-.12,.48):range(.12,.75),Math.sin(angle+range(-1.2,1.2))*.8).normalize();twig(start,d,range(1.3,2.3),.085,2);}
   const branches=mesh(mergeGeometries(geos),bark,group);branches.castShadow=true;branches.receiveShadow=true;geos.forEach(g=>g.dispose());
-  const flowersPerTip=mobile?30:40,count=tips.length*flowersPerTip,blossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,count);let idx=0;
-  for(const tip of tips){for(let n=0;n<flowersPerTip;n++){const a=range(0,Math.PI*2),u=range(-1,1),r=Math.cbrt(rand())*range(.45,.88);dummy.position.copy(tip).add(new THREE.Vector3(Math.cos(a)*Math.sqrt(1-u*u)*r,u*r*.72,Math.sin(a)*Math.sqrt(1-u*u)*r));dummy.rotation.set(range(0,6),range(0,6),range(0,6));dummy.scale.setScalar(range(1.08,1.9));dummy.updateMatrix();blossoms.setMatrixAt(idx,dummy.matrix);color.setHSL(range(.93,.98),range(.20,.43),range(.77,.94));blossoms.setColorAt(idx++,color);}petalSources.push({position:tip.clone(),group});}
+  const flowersPerTip=mobile?10:22,count=tips.length*flowersPerTip,blossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,count);let idx=0;
+  // Interleave tips so reducing instance count keeps the entire crown covered.
+  for(let n=0;n<flowersPerTip;n++)for(const tip of tips){const a=range(0,Math.PI*2),u=range(-1,1),r=Math.cbrt(rand())*range(.45,.88);dummy.position.copy(tip).add(new THREE.Vector3(Math.cos(a)*Math.sqrt(1-u*u)*r,u*r*.72,Math.sin(a)*Math.sqrt(1-u*u)*r));dummy.rotation.set(range(0,6),range(0,6),range(0,6));dummy.scale.setScalar(range(1.3,2.1));dummy.updateMatrix();blossoms.setMatrixAt(idx,dummy.matrix);color.setHSL(range(.93,.98),range(.20,.43),range(.77,.94));blossoms.setColorAt(idx++,color);}
+  for(const tip of tips)petalSources.push({position:tip.clone(),group});
+  anim.flowerMeshes.push(blossoms);
   blossoms.castShadow=true;blossoms.receiveShadow=true;group.add(blossoms);
   // Sparse pointed leaves and dark buds give each flower cloud a visible stem.
   const leaves=new THREE.InstancedMesh(leafGeo,leafMat,tips.length);
   tips.forEach((tip,i)=>{dummy.position.copy(tip).add(new THREE.Vector3(range(-.2,.2),-.24,range(-.2,.2)));dummy.rotation.set(range(-.7,.7),range(0,6),range(-.6,.6));dummy.scale.set(.055,range(.14,.26),.035);dummy.updateMatrix();leaves.setMatrixAt(i,dummy.matrix);leaves.setColorAt(i,color.setHSL(range(.22,.32),range(.20,.40),range(.26,.42)));});
   group.add(leaves);
+ }
  }
  // Understory: a single draw call for tens of thousands of wind-bent grass blades.
  const blade=new THREE.BufferGeometry();blade.setAttribute('position',new THREE.Float32BufferAttribute([-.045,0,0,.045,0,0,-.035,.35,0,.035,.35,0,.06,.72,0],3));blade.setIndex([0,1,2,1,3,2,2,3,4]);blade.computeVertexNormals();
@@ -145,7 +152,7 @@ export function makeLandscape(scene,renderer,mobile){
  }
  for(let i=0;i<pCount;i++){const p={index:i};respawn(p,true);particles.push(p);}petals.instanceColor.needsUpdate=true;anim.petals=petals;
  anim.updatePetals=(dt,t,wind,amount,riverSpeed)=>{
- petals.count=Math.floor(pCount*amount);fallen.count=Math.floor((mobile?650:1600)*amount);
+ petals.count=Math.floor(pCount*amount*anim.quality);fallen.count=Math.floor((mobile?650:1600)*amount*anim.quality);
  for(let i=0;i<petals.count;i++){
  const p=particles[i];surface.water=Math.abs(p.x-riverX(p.z))<riverWidth(p.z);
  surface.height=surface.water?.245:ground(p.x,p.z)+.10;
