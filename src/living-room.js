@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { woodMaterial } from './materials.js';
 
 export function makeLivingRoom(house) {
   const room=new THREE.Group();house.add(room);
-  const timber=new THREE.MeshStandardMaterial({color:'#94704d',roughness:.8});
-  const fabric=new THREE.MeshStandardMaterial({color:'#87917d',roughness:1});
+  const timber=woodMaterial('#c2a17b');
+  const fabric=new THREE.MeshPhysicalMaterial({color:'#87917d',roughness:1,sheen:.55,sheenColor:new THREE.Color('#b4bfaa'),sheenRoughness:.85});
   const cream=new THREE.MeshStandardMaterial({color:'#e4d2b4',roughness:1});
   const dark=new THREE.MeshStandardMaterial({color:'#111716',roughness:.3,metalness:.35});
   const weave=document.createElement('canvas');weave.width=weave.height=64;const ctx=weave.getContext('2d');

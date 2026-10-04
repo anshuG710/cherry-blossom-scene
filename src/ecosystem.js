@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { riverX, riverWidth } from './landscape.js';
+import { ground, riverX, riverWidth } from './landscape.js';
 import { daylight, sampleWind } from './weather.js';
 
 export function fishPosition(time, index) {
@@ -42,7 +42,7 @@ export function makeEcosystem(scene, bench, water, mobile) {
   }
   const birds = [];
   const feather = new THREE.MeshStandardMaterial({color:'#e8ddd0',roughness:.85,side:THREE.DoubleSide});
-  for (let i=0;i<2;i++) {
+  for (let i=0;i<(mobile?4:7);i++) {
     const root = new THREE.Group(); oval(root,feather,[0,0,0],[.16,.18,.38]);
     oval(root,dark,[0,.13,.27],[.13,.13,.15]);
     const beak = new THREE.Mesh(new THREE.ConeGeometry(.05,.18,8),new THREE.MeshStandardMaterial({color:'#c5a171'}));
@@ -55,6 +55,17 @@ export function makeEcosystem(scene, bench, water, mobile) {
     }
     const tail=fin(root,feather,[[-.16,-.25],[0,-.55],[.16,-.25]]);tail.rotation.x=Math.PI/2;
     scene.add(root);birds.push({root,wings});
+  }
+  const deer=[],fur=new THREE.MeshStandardMaterial({color:'#9b714b',roughness:1}),cream=new THREE.MeshStandardMaterial({color:'#d9cbb0',roughness:1});
+  for(let i=0;i<(mobile?3:5);i++){
+    const root=new THREE.Group(),head=new THREE.Group();root.name='Grazing deer';
+    oval(root,fur,[0,1.05,0],[.34,.47,.75]);oval(root,cream,[0,.85,.22],[.27,.24,.5]);
+    head.position.set(0,1.3,.5);root.add(head);oval(head,fur,[0,.32,.15],[.18,.47,.2]);
+    oval(head,fur,[0,.68,.36],[.2,.22,.32]);oval(head,dark,[0,.63,.64],[.13,.09,.08]);
+    for(const side of [-1,1]){const ear=oval(head,fur,[side*.2,.95,.22],[.1,.25,.065]);ear.rotation.z=-side*.45;oval(head,dark,[side*.18,.74,.42],[.027,.03,.03]);}
+    const legs=[];for(const x of [-.22,.22])for(const z of [-.46,.45]){const leg=new THREE.Group();leg.position.set(x,.95,z);root.add(leg);oval(leg,fur,[0,-.4,0],[.065,.46,.075]);oval(leg,dark,[0,-.86,.025],[.08,.08,.12]);legs.push(leg);}
+    const tail=oval(root,cream,[0,1.18,-.75],[.10,.13,.23]);tail.rotation.x=.5;
+    root.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(root);deer.push({root,head,legs,x:i<3?-13-i*4:20+(i-3)*5,z:i<3?6-i*5:-9-(i-3)*5});
   }
   const iron = new THREE.MeshStandardMaterial({color:'#36372f',metalness:.8,roughness:.38});
   const hook = new THREE.CatmullRomCurve3([new THREE.Vector3(1.9,0,-.65),new THREE.Vector3(1.9,2.8,-.65),new THREE.Vector3(1.8,3.7,-.65),new THREE.Vector3(.9,3.8,-.65),new THREE.Vector3(.65,3.48,-.65)]);
@@ -86,13 +97,20 @@ export function makeEcosystem(scene, bench, water, mobile) {
       root.position.copy(p);root.lookAt(next);tail.rotation.y=Math.sin(time*(4+settings.river)+i)*.4;
     });
     birds.forEach(({root,wings},i)=>{
-      const a=time*.075+i*.18;
-      const x=-4+Math.cos(a)*15,z=-20+Math.sin(a)*11;
+      const a=time*(.065+i*.002)+i*.62;
+      const x=-4+Math.cos(a)*(15+i),z=-20+Math.sin(a)*(11+i*.7);
       sampleWind(time,x,z,settings.wind,wind);
       const perch=THREE.MathUtils.smoothstep(night,.4,1);
       root.position.set(THREE.MathUtils.lerp(x+wind.x*.6,-3+i*1.2,perch),THREE.MathUtils.lerp(14+Math.sin(a*2+i)*1.5+wind.y,12.7+i*.35,perch),THREE.MathUtils.lerp(z+wind.z*.6,-4,perch));
       root.rotation.y=Math.atan2(-15*Math.sin(a),11*Math.cos(a));root.rotation.z=Math.sin(a)*.13*(1-perch);
       wings.forEach((wing,j)=>{wing.rotation.y=(j?1:-1)*THREE.MathUtils.lerp(Math.sin(time*5+i)*.55,1.3,perch);});
+    });
+    deer.forEach(({root,head,legs,x,z},i)=>{
+      const a=time*.035+i,pace=Math.sin(time*.22+i)>.35;
+      const px=x+Math.cos(a)*1.8,pz=z+Math.sin(a)*1.4;
+      root.position.set(px,ground(px,pz),pz);root.rotation.y=Math.atan2(-1.8*Math.sin(a),1.4*Math.cos(a));
+      head.rotation.x=pace?.05:.75+Math.sin(time*1.5+i)*.08;
+      legs.forEach((leg,j)=>leg.rotation.x=pace?Math.sin(time*3+i+(j===0||j===3?0:Math.PI))*.16:0);
     });
     sampleWind(time,-6,-4,settings.wind,wind);
     // Damped pendulum: gravity restores the lantern, wind supplies torque.

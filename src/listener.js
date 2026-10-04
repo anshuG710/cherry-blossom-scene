@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
 // A small articulated character, modeled in the same soft style as the valley.
-export function makeListener(bench) {
+export function makeListener(bench, look = {}) {
   const root = new THREE.Group(); root.visible = false; bench.add(root);
   const skin = new THREE.MeshStandardMaterial({color:'#c99377',roughness:.85});
-  const shirt = new THREE.MeshStandardMaterial({color:'#9fae95',roughness:1});
+  const shirt = new THREE.MeshStandardMaterial({color:look.shirt||'#9fae95',roughness:1});
   const pants = new THREE.MeshStandardMaterial({color:'#344558',roughness:.95});
   const hair = new THREE.MeshStandardMaterial({color:'#302725',roughness:1});
   const shoes = new THREE.MeshStandardMaterial({color:'#e4dac7',roughness:.8});

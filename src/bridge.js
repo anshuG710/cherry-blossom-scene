@@ -1,13 +1,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { bridge, bridgeHeight } from './navigation.js';
+import { woodMaterial } from './materials.js';
 
 export function makeBridge(scene) {
-  const wood = new THREE.MeshStandardMaterial({ color: '#a8784b', roughness: .86 });
-  wood.onBeforeCompile = shader => {
-    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 grainPosition;').replace('#include <begin_vertex>', '#include <begin_vertex>\ngrainPosition=position;');
-    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 grainPosition;').replace('#include <color_fragment>', '#include <color_fragment>\nfloat grain=sin(grainPosition.x*160.+sin(grainPosition.z*3.)*2.);diffuseColor.rgb*=.87+.1*grain;');
-  };
+  const wood = woodMaterial('#d0b08b');
   const planks = [], rails = [], bolts = [];
   const length = bridge.halfLength * 2, count = Math.ceil(length / .38);
   const left = bridge.x - bridge.halfLength;

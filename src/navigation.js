@@ -1,5 +1,5 @@
 import { ground, riverX, riverWidth } from './landscape.js';
-import { secondTree, benchPlaces } from './places.js';
+import { secondTree, benchPlaces, hutPlaces } from './places.js';
 export { secondTree } from './places.js';
 
 export const bridge = { z: 9, x: riverX(9), halfLength: riverWidth(9) + 4, halfWidth: 1.65 };
@@ -18,6 +18,8 @@ export function canWalk(x, z) {
   if (onBridge(x, z)) return Math.abs(z - bridge.z) < bridge.halfWidth - .3;
   if (Math.abs(x - riverX(z)) < riverWidth(z) + .35) return false;
   if (Math.hypot(x + 2, z + 3) < 1.8 || Math.hypot(x - secondTree.x, z - secondTree.z) < 1.6) return false;
+  for(const hut of hutPlaces){const dx=x-hut.x,dz=z-hut.z;
+    if(Math.abs(dx*Math.cos(hut.angle)-dz*Math.sin(hut.angle))<3.1&&Math.abs(dx*Math.sin(hut.angle)+dz*Math.cos(hut.angle))<3.1)return false;}
   // Exterior walls, porch, bench and garden fence remain solid.
   const dx = x + 18, dz = z + 18;
   const localX = dx * Math.cos(.3) - dz * Math.sin(.3);

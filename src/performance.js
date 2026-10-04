@@ -3,8 +3,8 @@ export function initialQuality({ cores = 8, memory = 8, coarse = false, reduced 
 }
 export const qualityLevels = [
   { name: 'Eco', ratio: .75, density: .4, shadows: false, effects: false, reflectionEvery: 4 },
-  { name: 'Balanced', ratio: 1, density: .7, shadows: true, effects: false, reflectionEvery: 2 },
-  { name: 'High', ratio: 1.5, density: 1, shadows: true, effects: true, reflectionEvery: 1 },
+  { name: 'Balanced', ratio: 1, density: .7, shadows: true, effects: false, reflectionEvery: 3 },
+  { name: 'High', ratio: 1.5, density: 1, shadows: true, effects: true, reflectionEvery: 2 },
 ];
 export function adaptiveQuality(initial) {
   let level=initial, seconds=0, frames=0, good=0;

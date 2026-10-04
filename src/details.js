@@ -12,13 +12,13 @@ export function blossomGeometry(detailed = true) {
     const point = (x, y, z, u, v) => add(x * Math.cos(angle) + z * Math.sin(angle), y,
       z * Math.cos(angle) - x * Math.sin(angle), u * .49, v);
     const center = point(0, .012, .073, .5, .5);
-    const segments = detailed ? 12 : 8;
+    const segments = detailed ? 12 : 5;
     for (let i = 0; i <= segments; i++) {
       const a = i / segments * Math.PI * 2;
       const notch = Math.pow(Math.max(0, Math.sin(a)), 24) * .023;
       const x = Math.cos(a) * .067 * (1 + .09 * Math.sin(a));
       const z = .076 + Math.sin(a) * .09 - notch;
-      const y = .024 + .027 * Math.pow(Math.sin(a), 2) + Math.cos(a * 3 + petal) * .007;
+      const y = .018 + .04 * Math.pow(Math.sin(a), 2) + Math.cos(a * 3 + petal) * .006;
       point(x, y, z, .5 + x / .145, .5 + (z - .076) / .19);
       if (i < segments) indices.push(center, center + i + 2, center + i + 1);
     }
@@ -48,7 +48,7 @@ export function blossomGeometry(detailed = true) {
   return geometry;
 }
 
-export function blossomMaterial() {
+export function blossomMaterial(sunDirection = {value:new THREE.Vector3(-.4,.3,-.8).normalize()}) {
   const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#fff6df'; ctx.fillRect(0, 0, 512, 512);
@@ -74,8 +74,10 @@ export function blossomMaterial() {
     emissive: '#ce789b', emissiveIntensity: .055});
   // A small view-dependent lift approximates light transmitted through thin petals.
   material.onBeforeCompile = shader => {
+    shader.uniforms.blossomSun=sunDirection;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 blossomSun;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>',
-      'outgoingLight += diffuseColor.rgb * 0.075 * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 2.0);\n#include <opaque_fragment>');
+      'float backlight=pow(max(0.,dot(-normalize(vViewPosition),normalize(mat3(viewMatrix)*blossomSun))),3.);\noutgoingLight += diffuseColor.rgb * .22 * backlight * (.35+.65*(1.-abs(dot(normal,normalize(vViewPosition)))));\n#include <opaque_fragment>');
   };
   return material;
 }
@@ -151,11 +153,12 @@ export function detailWater(water) {
       vec4 noise = getNoise(flow*size+vec2(0.,-time*10.));
     `)
     .replace('vec3 surfaceNormal = normalize( noise.xzy * vec3( 1.5, 1.0, 1.5 ) );', `
-      vec3 surfaceNormal=normalize(noise.xzy*vec3(1.05,1.,1.05));
+      float ripple=sin(flow.y*6.5-time*2.4+sin(flow.x*2.1))*cos(flow.x*3.7+time*.7);
+      vec3 surfaceNormal=normalize(noise.xzy*vec3(.8,1.,.8)+vec3(ripple*.022,0.,ripple*.04));
       surfaceNormal.xz=mat2(1.,-curve,curve,1.)*surfaceNormal.xz;
       surfaceNormal=normalize(surfaceNormal);
     `)
-    .replace('100.0, 2.0, 0.5', '150.0, 0.75, 0.18')
+    .replace('100.0, 2.0, 0.5', '110.0, 1.25, 0.18')
     .replace('float rf0 = 0.3;', 'float rf0 = 0.025;')
     .replace('vec3 scatter = max( 0.0, dot( surfaceNormal, eyeDirection ) ) * waterColor;', `
       float shore=pow(abs(riverUv.x-.5)*2.,3.);

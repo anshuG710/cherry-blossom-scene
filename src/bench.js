@@ -1,20 +1,12 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { woodMaterial } from './materials.js';
 
 export function makeBench(scene, ground, place={x:-6.1,z:-4.5,angle:-.18}) {
   const bench = new THREE.Group();
   bench.position.set(place.x, ground(place.x, place.z), place.z);
   bench.rotation.y = place.angle;
-  const wood = new THREE.MeshStandardMaterial({color: '#aa7950', roughness: .82});
-  wood.onBeforeCompile = shader => {
-    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 plankPosition;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nplankPosition=position;');
-    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 plankPosition;')
-      .replace('#include <color_fragment>', `#include <color_fragment>
-        float grain=sin(plankPosition.z*190.+plankPosition.y*160.+sin(plankPosition.x*2.8)*3.);
-        float fine=sin(plankPosition.z*540.+plankPosition.y*390.+sin(plankPosition.x*5.)*2.);
-        diffuseColor.rgb*=.83+.11*grain+.04*fine;`);
-  };
+  const wood = woodMaterial('#d7b991');
   const metal = new THREE.MeshStandardMaterial({color: '#323b37', metalness: .72, roughness: .48});
   function part(width, height, depth, x, y, z, material, tilt = 0) {
     const mesh = new THREE.Mesh(new RoundedBoxGeometry(width, height, depth, 2, Math.min(.035, height / 4)), material);

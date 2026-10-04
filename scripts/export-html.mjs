@@ -6,6 +6,12 @@ const result = await build({
   entryPoints: ['src/main.js'], bundle: true, minify: true,
   format: 'iife', target: 'es2020', outfile: 'app.js', write: false,
   loader: { '.png': 'dataurl', '.jpg': 'dataurl', '.svg': 'dataurl', '.mp3': 'dataurl' },
+  // The single-file export is a classic script, so provide Vite's env values explicitly.
+  define: { 'import.meta.env': JSON.stringify({
+    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || '',
+    VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || '',
+    VITE_TURNSTILE_SITE_KEY: process.env.VITE_TURNSTILE_SITE_KEY || '',
+  }) },
 });
 const script = result.outputFiles.find(file => file.path.endsWith('.js')).text;
 const css = result.outputFiles.find(file => file.path.endsWith('.css')).text

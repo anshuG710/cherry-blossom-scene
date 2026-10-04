@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { walkHeight, clearWalk, walkingPath } from './navigation.js';
 
-export function makeWalking({scene,camera,controls,canvas,avatar}) {
-  let enabled=false,path=[],phase=0,pointer=null,arrive=null;
+export function makeWalking({scene,camera,controls,canvas,avatar,onStart}) {
+  let enabled=false,available=false,path=[],phase=0,pointer=null,arrive=null;
   const stick=new THREE.Vector2(),joystick=document.getElementById('joystick'),knob=document.getElementById('joystick-knob');let stickPointer=null;
   const touches=new Set();
   const keys=new Set(), status=document.getElementById('walk-status');
@@ -15,15 +15,17 @@ export function makeWalking({scene,camera,controls,canvas,avatar}) {
   const editing=()=>document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||!!document.querySelector('dialog[open]');
   function clear(){keys.clear();path=[];marker.visible=false;arrive=null;stick.set(0,0);knob.style.transform='translate(0,0)';stickPointer=null;}
   function steer(e){if(stickPointer!==e.pointerId)return;const r=joystick.getBoundingClientRect(),radius=r.width*.32;stick.set((e.clientX-r.left-r.width/2)/radius,(e.clientY-r.top-r.height/2)/radius);if(stick.length()>1)stick.normalize();knob.style.transform=`translate(${stick.x*radius}px,${stick.y*radius}px)`;path=[];arrive=null;marker.visible=false;}
-  joystick.addEventListener('pointerdown',e=>{e.preventDefault();stickPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);steer(e);});
+  // While seated, touching the joystick or a movement key stands the avatar up and starts walking.
+  const begin=()=>{if(!enabled&&available)onStart?.();return enabled;};
+  joystick.addEventListener('pointerdown',e=>{e.preventDefault();if(!begin())return;stickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}steer(e);});
   joystick.addEventListener('pointermove',steer);
   for(const name of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(name,()=>{stickPointer=null;stick.set(0,0);knob.style.transform='translate(0,0)';});
-  window.addEventListener('keydown',e=>{if(!enabled||editing()||!codeMap[e.code])return;e.preventDefault();keys.add(codeMap[e.code]);path=[];marker.visible=false;});
+  window.addEventListener('keydown',e=>{if(!available||editing()||!codeMap[e.code]||!begin())return;e.preventDefault();keys.add(codeMap[e.code]);path=[];marker.visible=false;});
   window.addEventListener('keyup',e=>keys.delete(codeMap[e.code]));
   window.addEventListener('blur',clear);
   document.addEventListener('visibilitychange',clear);
   for(const button of document.querySelectorAll('[data-walk]')){
-    button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(button.dataset.walk);path=[];marker.visible=false;});
+    button.addEventListener('pointerdown',e=>{e.preventDefault();if(!begin())return;button.setPointerCapture(e.pointerId);keys.add(button.dataset.walk);path=[];marker.visible=false;});
     for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>keys.delete(button.dataset.walk));
   }
   canvas.addEventListener('pointerdown',e=>{touches.add(e.pointerId);pointer=touches.size===1?{x:e.clientX,y:e.clientY,id:e.pointerId}:null;});
@@ -41,11 +43,14 @@ export function makeWalking({scene,camera,controls,canvas,avatar}) {
     status.textContent=path.length?'Walking to your destination.':'Choose clear ground or the bridge.';
   });
   return {
-    goTo(destination,onArrival){path=walkingPath(avatar.root.position,destination);arrive=path.length?onArrival:null;return path.length>0;},
+    goTo(destination,onArrival){if(!destination){path=[];arrive=null;marker.visible=false;return false;}path=walkingPath(avatar.root.position,destination);arrive=path.length?onArrival:null;return path.length>0;},
     get enabled(){return enabled;},
-    set(on){enabled=on;clear();document.body.classList.toggle('walking',on);document.getElementById('walk-toggle').setAttribute('aria-pressed',String(on));document.getElementById('walk-pad').hidden=!on;
-      if(on){status.textContent='WASD / arrows · tap ground to walk · drag to look';controls.minDistance=4;controls.maxDistance=18;controls.maxPolarAngle=Math.PI*.46;
-        controls.target.copy(avatar.root.position).add(new THREE.Vector3(0,1.1,0));camera.position.copy(controls.target).add(new THREE.Vector3(0,5,9));controls.update();}
+    get pending(){return !!arrive;},
+    setAvailable(on){available=on;document.getElementById('walk-pad').hidden=!on;if(!on)clear();},
+    set(on){enabled=on;clear();document.body.classList.toggle('walking',on);document.getElementById('walk-toggle').setAttribute('aria-pressed',String(on));
+      if(on){status.textContent='WASD / arrows / joystick · tap ground to walk · drag to look';controls.minDistance=4;controls.maxDistance=18;controls.maxPolarAngle=Math.PI*.46;
+        // Start behind the avatar, so forward on the joystick or W walks the way it faces.
+        const facing=avatar.root.rotation.y;controls.target.copy(avatar.root.position).add(new THREE.Vector3(0,1.1,0));camera.position.copy(controls.target).add(new THREE.Vector3(-Math.sin(facing)*8,4.5,-Math.cos(facing)*8));controls.update();}
       else status.textContent='';
     },
     update(dt){

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { daylight } from './weather.js';
 import { makeLivingRoom } from './living-room.js';
+import { woodMaterial, surfaceTexture } from './materials.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function box(w, h, d, mat, parent, x = 0, y = 0, z = 0) {
@@ -27,10 +28,10 @@ function houseMaterials() {
   }
   const wallMap = new THREE.CanvasTexture(wallCanvas);
   wallMap.colorSpace = THREE.SRGBColorSpace;
-  const wall = new THREE.MeshStandardMaterial({ map: wallMap, roughness: 0.92 });
+  const wall = new THREE.MeshStandardMaterial({ map: wallMap, roughness: 0.92, bumpMap:surfaceTexture('earth-height'),bumpScale:.018 });
 
   // Dark timber
-  const timber = new THREE.MeshStandardMaterial({ color: '#4a3225', roughness: 0.85 });
+  const timber = woodMaterial('#756050');
 
   // Roof tiles — dark slate
   const roofCanvas = document.createElement('canvas');
@@ -55,10 +56,10 @@ function houseMaterials() {
   roofMap.colorSpace = THREE.SRGBColorSpace;
   roofMap.wrapS = roofMap.wrapT = THREE.RepeatWrapping;
   roofMap.repeat.set(2, 2);
-  const roof = new THREE.MeshStandardMaterial({ map: roofMap, roughness: 0.88 });
+  const roof = new THREE.MeshStandardMaterial({ map: roofMap, bumpMap:roofMap,bumpScale:.035,roughness: 0.88 });
 
   // Stone foundation
-  const stone = new THREE.MeshStandardMaterial({ color: '#8a8477', roughness: 0.95 });
+  const stone = new THREE.MeshStandardMaterial({ color: '#8a8477', roughness: 0.95,bumpMap:surfaceTexture('stone-height'),bumpScale:.045 });
 
   // Window glass — transparent, emissive at night
   const glass = new THREE.MeshPhysicalMaterial({
@@ -69,7 +70,7 @@ function houseMaterials() {
   });
 
   // Door wood
-  const door = new THREE.MeshStandardMaterial({ color: '#6b4226', roughness: 0.78 });
+  const door = woodMaterial('#a8805c');
 
   // Iron for lanterns
   const iron = new THREE.MeshStandardMaterial({ color: '#36372f', metalness: 0.8, roughness: 0.38 });
@@ -82,14 +83,10 @@ function houseMaterials() {
   });
 
   // Fence wood
-  const fence = new THREE.MeshStandardMaterial({ color: '#9c7b55', roughness: 0.88 });
+  const fence = woodMaterial('#c3ac86');
 
   // Stone path
   const pathStone = new THREE.MeshStandardMaterial({ color: '#9b9585', roughness: 0.92 });
-  for(const material of [timber,door,fence])material.onBeforeCompile=shader=>{
-    shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 woodPosition;').replace('#include <begin_vertex>','#include <begin_vertex>\nwoodPosition=position;');
-    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 woodPosition;').replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=sin(woodPosition.x*155.+woodPosition.z*127.+sin(woodPosition.y*4.)*2.);diffuseColor.rgb*=.88+.08*grain;');
-  };
 
   return { wall, timber, roof, stone, glass, door, iron, lanternGlass, fence, pathStone };
 }

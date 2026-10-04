@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Water } from 'three/addons/objects/Water.js';
 import { blossomGeometry, blossomMaterial, barkMaterial, detailWater } from './details.js';
 import { secondTree } from './places.js';
+import { assetGeometry, groundDetail } from './materials.js';
 
 let seed = 41729;
 const rand = () => { seed = (1664525 * seed + 1013904223) >>> 0; return seed / 4294967296; };
@@ -26,7 +27,7 @@ function taper(points,radius){
 }
 export function makeLandscape(scene,renderer,mobile){
  const anim={branches:[],water:null,grass:null,clouds:[],petals:null,ridgeMaterials:[],flowerMeshes:[],quality:1};
- const terrainMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});anim.terrainMaterial=terrainMat;
+ const terrainMat=groundDetail(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95}),1.6,.11);anim.terrainMaterial=terrainMat;
  // Separate riverbanks share the exact water boundary, including through bends.
  for(const side of [-1,1]){const verts=[],cols=[],indices=[], nx=90,nz=220;
   for(let j=0;j<=nz;j++){const z=65-j;for(let i=0;i<=nx;i++){const d=i/nx;const x=riverX(z)+side*(riverWidth(z)+d*d*125);const y=ground(x,z);verts.push(x,y,z);const variation=noise(x,z);color.setHSL(.235+variation*.025,.37+rand()*.16,.18+rand()*.045+variation*.02);if(i<3)color.lerp(new THREE.Color('#9b9075'),.68-i*.17);cols.push(color.r,color.g,color.b);if(i<nx&&j<nz){const a=j*(nx+1)+i;indices.push(a,a+nx+1,a+1,a+1,a+nx+1,a+nx+2);}}}
@@ -51,7 +52,9 @@ export function makeLandscape(scene,renderer,mobile){
  const detailLight={value:1};anim.detailLight=detailLight;
  const foamMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{time:{value:0},detailLight},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec2 vUv;uniform float time;uniform float detailLight;void main(){float x=vUv.x;float z=vUv.y*150.+time*1.4;float wave=sin(z*4.+sin(x*57.+z*.3)*2.);float ribbon=pow(max(0.,wave),24.)*pow(max(0.,sin(x*81.+sin(z*.18)*3.)),14.);float edges=pow(abs(x-.5)*2.,16.)*.23;gl_FragColor=vec4(vec3(.85,.94,.84)*detailLight,ribbon*.20+edges*(.4+.3*sin(z*2.)));}`});mesh(foamG,foamMat,scene);anim.foam=foamMat;
  const bark=barkMaterial();
- const blossomGeo=blossomGeometry(!mobile);const blossomMat=blossomMaterial();blossomMat.emissiveMap=blossomMat.map;anim.blossomMaterial=blossomMat;
+ anim.blossomSun={value:new THREE.Vector3(-.4,.3,-.8).normalize()};
+ anim.blossomGeometries={simple:blossomGeometry(false),detailed:blossomGeometry(true)};
+ const blossomGeo=mobile?anim.blossomGeometries.simple:anim.blossomGeometries.detailed;const blossomMat=blossomMaterial(anim.blossomSun);blossomMat.emissiveMap=blossomMat.map;anim.blossomMaterial=blossomMat;
  const fallenMat=blossomMat.clone();fallenMat.emissiveIntensity=0;anim.fallenMaterial=fallenMat;
  const petalSources=[];
  const leafGeo=new THREE.IcosahedronGeometry(1,0);
@@ -91,22 +94,27 @@ export function makeLandscape(scene,renderer,mobile){
  const blade=new THREE.BufferGeometry();blade.setAttribute('position',new THREE.Float32BufferAttribute([-.045,0,0,.045,0,0,-.035,.35,0,.035,.35,0,.06,.72,0],3));blade.setIndex([0,1,2,1,3,2,2,3,4]);blade.computeVertexNormals();
  const grassMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,side:THREE.DoubleSide});anim.grassMaterial=grassMat;const windUniform={value:.55},timeUniform={value:0};anim.windUniform=windUniform;anim.timeUniform=timeUniform;
  grassMat.onBeforeCompile=s=>{s.uniforms.uTime=timeUniform;s.uniforms.uWind=windUniform;
- s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nuniform float uTime;uniform float uWind;')
+ s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nuniform float uTime;uniform float uWind;varying float bladeHeight;')
  .replace('#include <begin_vertex>',`#include <begin_vertex>
  vec4 wp=instanceMatrix*vec4(position,1.);
+ bladeHeight=clamp(position.y/.72,0.,1.);
  float angle=uTime*.23+sin(uTime*.17)*.65;
  float gust=uWind*(.75+.25*sin(uTime*1.1+wp.x*.13+wp.z*.09));
  float swirl=sin(wp.x*.16-wp.z*.12+uTime*.7)*.32;
- vec2 bend=vec2(cos(angle+swirl),sin(angle+swirl))*gust*pow(position.y,2.)*.6;
+ float flutter=sin(uTime*2.3+wp.x*1.7+wp.z*.8)*.06*uWind;
+ vec2 bend=vec2(cos(angle+swirl),sin(angle+swirl))*(gust+flutter)*pow(position.y,2.)*.6;
  // Convert world wind into each blade's rotated local frame.
  vec3 localBend=transpose(mat3(instanceMatrix))*vec3(bend.x,0.,bend.y);
  transformed.xz+=localBend.xz;
- `);};
+ `);
+ s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nvarying float bladeHeight;')
+ .replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb*=mix(vec3(.62,.69,.53),vec3(1.08,1.06,.89),bladeHeight);');};
  const grassCount=mobile?18000:42000,grass=new THREE.InstancedMesh(blade,grassMat,grassCount);let gi=0;
  while(gi<grassCount){const near=rand()<.78;const x=near?range(-26,30):range(-55,55),z=near?range(-30,42):range(-65,42),d=Math.abs(x-riverX(z))-riverWidth(z);if(d<.4||rand()>.7)continue;dummy.position.set(x,ground(x,z)-.035,z);dummy.rotation.set(0,range(0,Math.PI*2),range(-.14,.14));dummy.scale.set(range(.7,1.5),range(.25,1.05)*(z<-35?.75:1),1);dummy.updateMatrix();grass.setMatrixAt(gi,dummy.matrix);color.setHSL(range(.18,.28),range(.35,.62),range(.25,.43));grass.setColorAt(gi++,color);}grass.receiveShadow=true;scene.add(grass);anim.grass=grass;
- const rockG=new THREE.IcosahedronGeometry(1,2);const rp=rockG.attributes.position;for(let i=0;i<rp.count;i++){const x=rp.getX(i),y=rp.getY(i),z=rp.getZ(i),r=1+.14*noise(x*3,z*3+y);rp.setXYZ(i,x*r,y*r,z*r);}rockG.computeVertexNormals();
- const rockMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1});
- rockMat.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vRock;varying float vUp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvRock=position;vUp=normal.y;');s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vRock;varying float vUp;').replace('#include <color_fragment>','#include <color_fragment>\nfloat moss=smoothstep(.2,.8,vUp+sin(vRock.x*19.+sin(vRock.z*14.))*.23);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.10,.17,.045),moss*.72);');};const rocks=new THREE.InstancedMesh(rockG,rockMat,470);
+ const rockG=assetGeometry('stone');
+ const rockMat=groundDetail(new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92}),3,.065);
+ const mineralDetail=rockMat.onBeforeCompile;
+ rockMat.onBeforeCompile=s=>{mineralDetail(s);s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vRock;varying float vUp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvRock=position;vUp=normal.y;');s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vRock;varying float vUp;').replace('#include <color_fragment>','#include <color_fragment>\nfloat moss=smoothstep(.2,.8,vUp+sin(vRock.x*19.+sin(vRock.z*14.))*.23);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.10,.17,.045),moss*.55);');};const rocks=new THREE.InstancedMesh(rockG,rockMat,470);
  for(let i=0;i<470;i++){const z=range(-110,48),side=rand()>.5?1:-1;const x=riverX(z)+side*(riverWidth(z)+range(-.25,5));const s=range(.13,.8)*(i<25?1.7:1);dummy.position.set(x,ground(x,z)-s*.28,z);dummy.rotation.set(range(-.3,.3),range(0,6),range(-.4,.4));dummy.scale.set(s*range(1,1.6),s*.66,s);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);color.setHSL(.16+rand()*.08,.10+rand()*.17,range(.23,.43));rocks.setColorAt(i,color);}rocks.castShadow=true;rocks.receiveShadow=true;scene.add(rocks);
  // Partly submerged stones interrupt the current; their wakes stretch downstream.
  const riverStones=new THREE.InstancedMesh(rockG,rockMat,24);

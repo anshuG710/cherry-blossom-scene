@@ -27,7 +27,7 @@ const canvas=document.querySelector('#scene');
 const mobile=matchMedia('(max-width: 700px)').matches;
 const qualityStart=initialQuality({cores:navigator.hardwareConcurrency,memory:navigator.deviceMemory,coarse:matchMedia('(pointer: coarse)').matches,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches});
 const lightweight=qualityStart<2;
-const settings={wind:.55,petals:.6,river:.8,day:.24,fog:.35,bloom:.3,cinematic:false};
+const settings={wind:.55,petals:.9,river:.8,day:.24,fog:.35,bloom:.3,cinematic:false};
 let renderer;
 try {renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});} catch(e){document.querySelector('#loading').innerHTML='<p>This landscape needs WebGL. Please enable hardware acceleration and reload.</p>';throw e;}
 renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.3:1.65));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
@@ -38,7 +38,20 @@ const controls=new OrbitControls(camera,canvas);controls.target.copy(target);con
 const hemi=new THREE.HemisphereLight('#d4e9ec','#354d32',2);scene.add(hemi);
 const fill=new THREE.DirectionalLight('#f6dfd2',1.35);fill.position.set(14,20,32);scene.add(fill);
 const sun=new THREE.DirectionalLight('#ffe1b2',3.3);sun.position.set(-40,65,-45);sun.castShadow=true;sun.shadow.mapSize.set(mobile?1024:2048,mobile?1024:2048);Object.assign(sun.shadow.camera,{left:-37,right:37,top:36,bottom:-36,near:1,far:300});sun.shadow.bias=-.0003;sun.shadow.normalBias=.06;sun.shadow.radius=3;sun.target.position.set(0,0,-8);scene.add(sun,sun.target);
-const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color('#819ea8')},bottom:{value:new THREE.Color('#edd9b7')},sunColor:{value:new THREE.Color('#ffdfb0')},sunPos:{value:new THREE.Vector3(-.45,.34,-.8).normalize()}},vertexShader:'varying vec3 vWorld;void main(){vWorld=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec3 vWorld;uniform vec3 top;uniform vec3 bottom;uniform vec3 sunColor;uniform vec3 sunPos;void main(){vec3 d=normalize(vWorld);float h=max(0.,d.y);vec3 c=mix(bottom,top,pow(h,.55));float s=max(0.,dot(d,sunPos));c+=sunColor*(pow(s,18.)*.21+pow(s,350.)*.65);gl_FragColor=vec4(c,1.);}`});scene.add(new THREE.Mesh(new THREE.SphereGeometry(450,32,16),skyMat));
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color('#819ea8')},bottom:{value:new THREE.Color('#edd9b7')},sunColor:{value:new THREE.Color('#ffdfb0')},sunPos:{value:new THREE.Vector3(-.45,.34,-.8).normalize()},daylight:{value:1}},vertexShader:'varying vec3 vWorld;void main(){vWorld=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`
+varying vec3 vWorld;uniform vec3 top;uniform vec3 bottom;uniform vec3 sunColor;uniform vec3 sunPos;uniform float daylight;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
+void main(){
+ vec3 d=normalize(vWorld);float h=max(0.,d.y);vec3 c=mix(bottom,top,pow(h,.6));float s=max(0.,dot(d,sunPos));
+ vec2 p=d.xz/(.3+h)*3.;float clouds=noise(p)*.57+noise(p*2.1)*.28+noise(p*4.3)*.15;
+ float veil=smoothstep(.48,.76,clouds)*smoothstep(.015,.18,h)*(1.-smoothstep(.5,.85,h));
+ c=mix(c,mix(top*.8,bottom,clamp(s*.7+.25,0.,1.)),veil*.38*daylight);
+ c+=sunColor*(pow(s,24.)*.28+pow(s,240.)*.5+smoothstep(.9997,.99995,s)*3.);
+ gl_FragColor=vec4(c,1.);
+ #include <tonemapping_fragment>
+ #include <colorspace_fragment>
+}`});scene.add(new THREE.Mesh(new THREE.SphereGeometry(450,32,16),skyMat));
 const world=makeLandscape(scene,renderer,lightweight);
 makeBridge(scene);
 const bench=makeBench(scene,ground);
@@ -71,14 +84,27 @@ function applyQuality(index){
  qualityIndex=index;const q=qualityLevels[index];
  const ratio=Math.min(devicePixelRatio,q.ratio,Math.sqrt(2500000/(innerWidth*innerHeight)));
  renderer.setPixelRatio(ratio);composer.setPixelRatio(ratio);
- renderer.shadowMap.enabled=q.shadows;sun.shadow.mapSize.set(index===2?2048:512,index===2?2048:512);
- if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
- scene.traverse(object=>{if(object.material)for(const material of Array.isArray(object.material)?object.material:[object.material])material.needsUpdate=true;});
+ bloom.enabled=q.effects;
+ const shadowSize=index===2?2048:1024,shadowsChanged=renderer.shadowMap.enabled!==q.shadows;
+ renderer.shadowMap.enabled=q.shadows;
+ if(sun.shadow.mapSize.x!==shadowSize){
+   sun.shadow.mapSize.set(shadowSize,shadowSize);
+   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
+ }
+ if(shadowsChanged)scene.traverse(object=>{if(object.material)for(const material of Array.isArray(object.material)?object.material:[object.material])material.needsUpdate=true;});
  world.quality=q.density;world.grass.count=Math.floor(grassMaximum*q.density);
- world.flowerMeshes.forEach(mesh=>{mesh.count=Math.floor(mesh.instanceMatrix.count*q.density);mesh.castShadow=index===2;});
+ world.flowerMeshes.forEach(mesh=>{
+   mesh.count=Math.floor(mesh.instanceMatrix.count*q.density);
+   mesh.geometry=world.blossomGeometries.simple;mesh.castShadow=false;
+ });
 }
-const reflect=world.water.onBeforeRender;
-world.water.onBeforeRender=function(...args){if(renderFrame%qualityLevels[qualityIndex].reflectionEvery===0)reflect.apply(this,args);};
+const reflect=world.water.onBeforeRender,reflectionPosition=new THREE.Vector3(),reflectionRotation=new THREE.Quaternion();
+let reflectionReady=false;
+world.water.onBeforeRender=function(...args){
+ if(!reflectionReady||reflectionPosition.distanceToSquared(camera.position)>.0025||1-Math.abs(reflectionRotation.dot(camera.quaternion))>.00001||renderFrame%qualityLevels[qualityIndex].reflectionEvery===0){
+   reflect.apply(this,args);reflectionPosition.copy(camera.position);reflectionRotation.copy(camera.quaternion);reflectionReady=true;
+ }
+};
 applyQuality(qualityStart);
 // Soft, translucent shafts use a feathered profile and do not cast opaque shadows.
 const rayGroup=new THREE.Group();scene.add(rayGroup);
@@ -94,17 +120,22 @@ function momentColor(value, palette, target){
 function light(){
  const v=settings.day,{night,noon}=daylight(v),day=1-night;
  sun.color.set('#ffc79c').lerp(new THREE.Color('#fff4dd'),noon).lerp(new THREE.Color('#a9c8ff'),night);
- sun.intensity=(2.1+noon*.9)*day+.38*night;
- sun.position.set(-55+Math.min(v/.72,1)*100,32+noon*48,-55).lerp(new THREE.Vector3(-48,59,-180),night);
- hemi.intensity=(.85+noon*.55)*day+.27*night;
+ sun.intensity=(2.8+noon*.6)*day+.38*night;
+ const elevation=THREE.MathUtils.smoothstep(v,.22,.43)*(1-THREE.MathUtils.smoothstep(v,.54,.76));
+ sun.position.set(-55+Math.min(v/.72,1)*100,12+elevation*65,-75).lerp(new THREE.Vector3(-48,59,-180),night);
+ skyMat.uniforms.sunPos.value.copy(sun.position).sub(sun.target.position).normalize();
+ skyMat.uniforms.daylight.value=day;
+ world.blossomSun.value.copy(skyMat.uniforms.sunPos.value);
+ hemi.intensity=(.65+elevation*.65)*day+.27*night;
  hemi.color.set('#d4e9ec').lerp(new THREE.Color('#7a9dce'),night);
- fill.intensity=1.35*day+.19*night;fill.color.set('#f6dfd2').lerp(new THREE.Color('#8aace6'),night);
- skyMat.uniforms.top.value.set('#6695b3').lerp(new THREE.Color('#64a5ca'),noon*.6).lerp(new THREE.Color('#030918'),night);
- skyMat.uniforms.bottom.value.set('#efbfad').lerp(new THREE.Color('#d8e1dd'),noon).lerp(new THREE.Color('#17273e'),night);
+ fill.intensity=(.38+elevation*.35)*day+.19*night;fill.color.set('#f6dfd2').lerp(new THREE.Color('#8aace6'),night);
+ skyMat.uniforms.top.value.set('#847891').lerp(new THREE.Color('#609ec4'),elevation).lerp(new THREE.Color('#030918'),night);
+ skyMat.uniforms.bottom.value.set('#f2cbae').lerp(new THREE.Color('#d8e1dd'),elevation).lerp(new THREE.Color('#17273e'),night);
  skyMat.uniforms.sunColor.value.set('#ffdfb0').multiplyScalar(day);
- scene.fog.color.copy(skyMat.uniforms.bottom.value).lerp(new THREE.Color('#abbebb'),day*.5);
- scene.fog.density=(.0015+settings.fog*.007)*(1+night*.3+(1-noon)*.12);
- world.water.material.uniforms.sunDirection.value.copy(sun.position).normalize();
+ scene.fog.color.copy(skyMat.uniforms.bottom.value).lerp(new THREE.Color('#aca0b9'),day*(1-elevation)*.45);
+ scene.fog.density=(.0012+settings.fog*.0045)*(1+night*.3);
+ scene.environmentIntensity=.28*day+.06*night;
+ world.water.material.uniforms.sunDirection.value.copy(skyMat.uniforms.sunPos.value);
  world.water.material.uniforms.sunColor.value.copy(sun.color).multiplyScalar(day+.15*night);
  momentColor(v,['#19745f','#258a85','#50776c','#245371','#071a2c'],world.water.material.uniforms.waterColor.value);
  momentColor(v,['#fff0c9','#dcffe2','#ffd2a2','#a8c6c5','#718a9d'],world.terrainMaterial.color);
@@ -116,10 +147,10 @@ function light(){
  world.detailLight.value=day+.12*night;
  for(const cloud of world.clouds)cloud.material.color.set('#fff0e1').lerp(new THREE.Color('#263b60'),night);
  nightSky.set(night);
- bloom.strength=settings.bloom*.12;bloom.threshold=.9;bloom.radius=.12;
+ bloom.strength=settings.bloom*.8;bloom.threshold=1.2;bloom.radius=.45;
  world.blossomMaterial.emissive.set('#ff91c4');
- world.blossomMaterial.emissiveIntensity=settings.bloom*settings.bloom*.32;
- const petalGlow=THREE.MathUtils.smoothstep(v,.9,1)*Math.sqrt(settings.bloom)*.4;
+ world.blossomMaterial.emissiveIntensity=settings.bloom*settings.bloom*.03*night;
+ const petalGlow=THREE.MathUtils.smoothstep(v,.9,1)*Math.sqrt(settings.bloom)*.035;
  world.petalMaterial.emissive.set('#ffe0ed');
  world.petalMaterial.emissiveIntensity=petalGlow;
  world.fallenMaterial.emissive.set('#ffe0ed');
@@ -130,6 +161,14 @@ function light(){
 }
 const labels={wind:v=>v<.1?'Still':v<.8?'Gentle':v<1.4?'Breezy':'Blustery',petals:v=>`${Math.round(v*100)}%`,river:v=>`${v.toFixed(1)}×`,day:v=>v<.27?'Golden hour':v<.54?'Midday':v<.75?'Sunset':v<.9?'Blue hour':'Night',fog:v=>`${Math.round(v*100)}%`,bloom:v=>`${Math.round(v*100)}%`};
 for(const name of Object.keys(labels)){const input=$(name);const change=()=>{settings[name]=+input.value;$(name+'-value').value=labels[name](settings[name]);input.style.setProperty('--value',`${100*(+input.value- +input.min)/(+input.max- +input.min)}%`);light();};input.addEventListener('input',change);change();}
+// Bake a small, neutral sky environment once for soft reflections on PBR surfaces.
+const environmentScene=new THREE.Scene(),environmentMaterial=skyMat.clone();
+environmentMaterial.uniforms.top.value.set('#99b9d0');environmentMaterial.uniforms.bottom.value.set('#b5b8a8');
+environmentMaterial.uniforms.sunColor.value.set(0);
+const environmentSphere=new THREE.Mesh(new THREE.SphereGeometry(450,16,8),environmentMaterial);environmentScene.add(environmentSphere);
+const pmrem=new THREE.PMREMGenerator(renderer),environmentTarget=pmrem.fromScene(environmentScene,.03,.1,600);
+scene.environment=environmentTarget.texture;
+environmentSphere.geometry.dispose();environmentMaterial.dispose();pmrem.dispose();
 function cinematic(on){settings.cinematic=on;$('cinematic').setAttribute('aria-checked',String(on));controls.autoRotate=on;controls.autoRotateSpeed=.22;}
 $('cinematic').addEventListener('click',()=>cinematic(!settings.cinematic));controls.addEventListener('start',()=>{cinematic(false);document.body.classList.add('exploring');});
 let resetting=false,listenShot=null,listenerSeconds=0,listenerActive=false,musicPlaying=false,seatIndex=0,seatOffset=0,avatarUnlocked=false;
@@ -208,13 +247,14 @@ for(const {group,phase,amp} of world.branches){
  group.rotation.x+=spring.x*dt;group.rotation.z+=spring.z*dt;
 }
 ecosystem.update(dt,elapsed,settings);
-world.water.material.uniforms.distortionScale.value=1.3+settings.wind*1.5;
+ world.water.material.uniforms.distortionScale.value=.65+settings.wind*.85;
 world.water.material.uniforms.windRipple.value=settings.wind;
 world.updatePetals(dt,elapsed,settings.wind,settings.petals,settings.river);nightSky.update(elapsed);
  sampleWind(elapsed,0,0,settings.wind,branchWind);
  for(const c of world.clouds){c.position.x+=dt*branchWind.x*.18;c.position.z+=dt*branchWind.z*.08;if(c.position.x>190)c.position.x=-190;if(c.position.x<-190)c.position.x=190;}
 }
 house.update(settings,elapsed);
+scenery.update(settings.day,elapsed);
 if(listenerActive){
  listenerSeconds+=dt;listener.update(listenerSeconds,musicPlaying);
  if(listenShot){const t=THREE.MathUtils.clamp(listenerSeconds/4.6,0,1),ease=t*t*t*(t*(t*6-15)+10);
@@ -227,10 +267,16 @@ if(resetting){camera.position.lerp(start,1-Math.exp(-dt*4));controls.target.lerp
 walking.update(dt);
 if(!listenShot)controls.update(dt);
 if(!listenerActive)camera.position.y=Math.max(camera.position.y,ground(camera.position.x,camera.position.z)+2.2);
-if(qualityLevels[qualityIndex].effects)composer.render();else renderer.render(scene,camera);
-scenery.update(settings.day,elapsed);fishing.update(dt);
+if(renderFrame%12===0)for(const mesh of world.flowerMeshes){
+ mesh.getWorldPosition(branchPosition);
+ const distance=camera.position.distanceToSquared(branchPosition);
+ mesh.geometry=qualityIndex===2&&distance<625?world.blossomGeometries.detailed:world.blossomGeometries.simple;
+ mesh.castShadow=qualityIndex===2&&distance<900;
+}
+if(qualityIndex>0)composer.render();else renderer.render(scene,camera);
+fishing.update(dt);
 if(elapsed-lastPresence>.5){lastPresence=elapsed;listener.root.getWorldPosition(visitorPosition);window.dispatchEvent(new CustomEvent('anshu:scene-state',{detail:{visible:avatarUnlocked,seated:listenerActive&&!listenShot,bench:seatIndex,offset:seatOffset,x:visitorPosition.x,y:visitorPosition.y,z:visitorPosition.z,angle:listener.root.rotation.y,walking:walking.enabled}}));}
-if(elapsed>4){const sample=adaptive.sample(rawDt);if(sample){if(sample.level!==qualityIndex)applyQuality(sample.level);$('quality').textContent=`${qualityLevels[qualityIndex].name.toUpperCase()} · ${Math.round(sample.fps)} FPS · AUTO`;}}
+const sample=adaptive.sample(rawDt);if(sample){if(sample.level!==qualityIndex)applyQuality(sample.level);$('quality').textContent=`${qualityLevels[qualityIndex].name.toUpperCase()} · ${Math.round(sample.fps)} FPS · AUTO`;}
 }
 frame();requestAnimationFrame(()=>$('loading').classList.add('done'));
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();$('loading').classList.remove('done');$('loading').innerHTML='<p>The landscape paused. Reload to return to the valley.</p>';});

@@ -14,7 +14,7 @@ export function makeNight(scene) {
   const stars = new THREE.Points(geometry, new THREE.PointsMaterial({color: '#cbdcff', size: .65,
     transparent: true, opacity: 0, depthWrite: false, fog: false}));
   scene.add(stars);
-  const moonMaterial = new THREE.ShaderMaterial({transparent: true, uniforms: {night: {value: 0}},
+  const moonMaterial = new THREE.ShaderMaterial({transparent: true, depthWrite: false, uniforms: {night: {value: 0}},
     vertexShader: 'varying vec3 p;varying vec3 n;void main(){p=position;n=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader: `varying vec3 p;varying vec3 n;uniform float night;void main(){
       float craters=sin(p.x*4.+sin(p.y*3.))*sin(p.z*3.7+p.y*2.);
@@ -37,6 +37,6 @@ export function makeNight(scene) {
       gl_PointSize=clamp(90./-mv.z,1.,5.);pulse=pow(.5+.5*sin(time*1.4+phase),3.);}`,
     fragmentShader:'uniform float night;varying float pulse;void main(){float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(1.,.83,.36,max(0.,1.-d)*pulse*night);}'});
   scene.add(new THREE.Points(fireflyGeometry,fireflyMaterial));
-  return {set(value){stars.material.opacity=value*.85;moonMaterial.uniforms.night.value=value;moon.visible=value>.001;fireflyMaterial.uniforms.night.value=value;},
+  return {set(value){stars.material.opacity=value*.85;moonMaterial.uniforms.night.value=value;fireflyMaterial.uniforms.night.value=value;},
     update(time){fireflyMaterial.uniforms.time.value=time;}};
 }

@@ -29,6 +29,11 @@ for (const detailed of [false, true]) {
   geometry.dispose();
 }
 console.log('Detailed and mobile blossom geometry checks passed.');
+const nearBlossom=blossomGeometry(true),farBlossom=blossomGeometry(false);
+assert.ok(farBlossom.index.count<nearBlossom.index.count*.5,'Distant blossoms use less than half the close-up triangle count.');
+nearBlossom.computeBoundingSphere();farBlossom.computeBoundingSphere();
+assert.ok(Math.abs(nearBlossom.boundingSphere.radius-farBlossom.boundingSphere.radius)<.025,'Detail changes preserve the blossom silhouette size.');
+nearBlossom.dispose();farBlossom.dispose();
 
 const directions = new Set();
 for (let time = 0; time < 60; time += .25) {
