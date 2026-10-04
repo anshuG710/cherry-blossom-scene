@@ -1,4 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const pageHtml=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const benchScript=readFileSync(new URL('../src/bench-social.js',import.meta.url),'utf8');
+for(const [,id] of benchScript.matchAll(/\$\('([^']+)'\)/g)){
+  assert.ok(pageHtml.includes(`id="${id}"`),`Bench initialization requires #${id} in index.html.`);
+}
 import { bridge, bridgeHeight, canWalk, clearWalk, walkingPath } from '../src/navigation.js';
 import { initialQuality, adaptiveQuality } from '../src/performance.js';
 import * as THREE from 'three';

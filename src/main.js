@@ -62,7 +62,7 @@ const ecosystem=makeEcosystem(scene,bench,world.water,mobile);
 const nightSky=makeNight(scene);
 const house=makeHouse(scene,ground);
 listener.root.visible=false;
-const walking=makeWalking({scene,camera,controls,canvas,avatar:listener});
+const walking=makeWalking({scene,camera,controls,canvas,avatar:listener,onStart:()=>{stand();walking.set(true);}});
 const fishing=makeFishing(scene,listener,ecosystem);
 const blossomLight=new THREE.PointLight(0xff8fbd,0,26,2);blossomLight.position.set(-2,10,-3);scene.add(blossomLight);
 const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.18,.65,1.05);composer.addPass(bloom);composer.addPass(new OutputPass());
@@ -174,6 +174,7 @@ $('cinematic').addEventListener('click',()=>cinematic(!settings.cinematic));cont
 let resetting=false,listenShot=null,listenerSeconds=0,listenerActive=false,musicPlaying=false,seatIndex=0,seatOffset=0,avatarUnlocked=false;
 const shotPosition=new THREE.Vector3(),shotTarget=new THREE.Vector3();
 function returnToLandscape(){
+ walking.setAvailable?.(false);
  fishing.cancel();walking.set(false);$('walk-toggle').textContent='Walk around';$('avatar-tools').hidden=true;avatarUnlocked=false;
  listenShot=null;listenerActive=false;listener.root.visible=false;controls.enabled=false;controls.enableDamping=false;controls.maxDistance=85;controls.maxPolarAngle=Math.PI*.475;
  controls.minDistance=4;cinematic(false);document.body.classList.remove('exploring','listening');resetting=true;
@@ -260,7 +261,7 @@ if(listenerActive){
  if(listenShot){const t=THREE.MathUtils.clamp(listenerSeconds/4.6,0,1),ease=t*t*t*(t*(t*6-15)+10);
  camera.position.lerpVectors(listenShot.position,shotPosition,ease);controls.target.lerpVectors(listenShot.target,shotTarget,ease);
  camera.lookAt(controls.target);
- if(listenerSeconds>=5.35){listenShot=null;avatarUnlocked=true;$('avatar-tools').hidden=false;controls.enabled=true;controls.enableDamping=true;window.dispatchEvent(new Event('anshu:listen-ready'));}
+ if(listenerSeconds>=5.35){listenShot=null;avatarUnlocked=true;walking.setAvailable?.(true);$('avatar-tools').hidden=false;controls.enabled=true;controls.enableDamping=true;window.dispatchEvent(new Event('anshu:listen-ready'));}
  }
 }
 if(resetting){camera.position.lerp(start,1-Math.exp(-dt*4));controls.target.lerp(target,1-Math.exp(-dt*4));if(camera.position.distanceTo(start)<.04){resetting=false;controls.enabled=true;controls.enableDamping=true;controls.minDistance=29;}}

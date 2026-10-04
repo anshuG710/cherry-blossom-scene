@@ -16,6 +16,12 @@
  <p id="bench-status" role="status"></p>
  <div id="bench-invitation" hidden><p id="bench-invitation-text"></p><button id="bench-accept">Accept</button><button id="bench-decline">Decline</button></div>
  <button id="bench-leave" hidden>Leave shared listening</button>
+ <button id="bench-nearby" hidden>Ask to sit together</button>
+ <section id="bench-chat" aria-label="Companion chat" hidden>
+  <p>Chat with <span id="bench-chat-with">your companion</span></p>
+  <div id="bench-chat-log" role="log" aria-live="polite"></div>
+  <form id="bench-chat-form"><label for="bench-chat-input">Message</label><input id="bench-chat-input" maxlength="200" autocomplete="off"><button type="submit">Send</button></form>
+ </section>
 </section>
 <header><a class="brand" href="./" aria-label="Safe Place home"><span class="brand-mark">✳</span><span>SAFE PLACE<small>A MOMENT IN NATURE</small></span></a><div class="top-right"><button class="feature-button" id="music-open" aria-expanded="false" aria-controls="music-card">♫ <span>Listen</span></button><button class="feature-button" id="review-open" aria-label="Leave a review">☆ <span>Review</span></button><button class="feature-button" id="chat-open" aria-expanded="false" aria-controls="chat-card">💬 <span>Chat</span></button><button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen">⛶</button></div></header>
 <section id="music-card" class="feature-card music-card compact-player" aria-label="Music player" hidden>
