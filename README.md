@@ -10,7 +10,7 @@ npm run dev
 ```
 
 Open the local URL printed by Vite. `npm run build` creates the production bundle in `dist`; `npm run preview` serves it.
-
+or visit site -  https://anshug710.github.io/cherry-blossom-scene/
 ## Controls
 
 Drag to orbit a full 360°; scroll or pinch to zoom. The bottom panel adjusts wind, petals, river flow, daylight, fog and bloom. Cinematic camera slowly rotates through a continuous 360° orbit; manual camera interaction disables it. Reset camera eases back to the opening composition.
